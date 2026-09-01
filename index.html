@@ -533,9 +533,11 @@ function nbNext(){
   }, NB.onMs);
 }
 function nbPress(){
-  if (NB.phase !== 'on') return;
-  NB.phase = 'done';
+  // 整个 trial 周期（显示期 + 空白期）都可响应；已判定过的轮次忽略
+  if (NB.phase !== 'on' && NB.phase !== 'off') return;
   const cur = NB.log[NB.log.length - 1];
+  if (!cur || cur.hit || cur.fa) return;
+  NB.phase = 'done';
   if (NB.curMatch) {
     cur.hit = true; NB.stats.hits++;
     beep(1300, 0.12, 'square', 0.08);
@@ -654,9 +656,11 @@ function mxNext(){
   }, MX.onMs);
 }
 function mxPress(){
-  if (MX.phase !== 'on') return;
-  MX.phase = 'done';
+  // 整个 trial 周期（显示期 + 空白期）都可响应；已判定过的轮次忽略
+  if (MX.phase !== 'on' && MX.phase !== 'off') return;
   const cur = MX.log[MX.log.length - 1];
+  if (!cur || cur.hit || cur.fa) return;
+  MX.phase = 'done';
   if (MX.curMatch) {
     cur.hit = true; MX.stats.hits++;
     beep(1300, 0.12, 'square', 0.08);
@@ -773,7 +777,8 @@ function dbNext(){
   }, DB.onMs);
 }
 function dbPress(kind){
-  if (DB.phase !== 'on') return;
+  // 整个 trial 周期（显示期 + 空白期）都可响应；同轮已判定过的通道才忽略
+  if (DB.phase !== 'on' && DB.phase !== 'off') return;
   const cur = DB.log[DB.log.length - 1];
   if (kind === 'both') {
     if (DB.bothDone || DB.posDone || DB.digDone) return;
