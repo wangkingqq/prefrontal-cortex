@@ -164,11 +164,34 @@ function saveS(){
 }
 /* 用户设置：每个游戏的参数自动记忆 */
 const DEF_SETTINGS = {
-  nback: { n: 2, speed: 'normal', count: 20 },
-  dual:  { n: 1, count: 20 },
-  mix:   { n: 2, speed: 'normal', count: 20 },
-  span:  { mode: 'fwd', start: 3 },
+  nback: { n: 2, speed: 'normal', count: 20, mode: 'manual', stim: 'num', level: 2 },
+  dual:  { n: 1, count: 20, mode: 'manual', stim: 'num', level: 1 },
+  mix:   { n: 2, speed: 'normal', count: 20, mode: 'manual', stim: 'num', level: 2 },
+  span:  { mode: 'fwd', start: 3, adapt: false, stim: 'num', level: 3 },
 };
+/* 刺激池：数字 / 字母 / 颜色 / 表情 */
+const STIM = {
+  num:    ['0','1','2','3','4','5','6','7','8','9'],
+  letter: ['A','B','C','D','E','F','G','H','J','K'],
+  color:  ['红','橙','黄','绿','蓝','紫','粉','青','棕','灰'],
+  emoji:  ['🍎','🍌','🍇','🍓','🍉','🍒','🥝','🍍','🥑','🍋'],
+};
+function stimPool(g){
+  const s = settings[g] || {};
+  return STIM[s.stim] || STIM.num;
+}
+function speakStim(item){
+  try {
+    if (window.speechSynthesis && speechSynthesis.getVoices().length) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(item));
+      u.rate = 1.05; u.pitch = 1;
+      speechSynthesis.speak(u);
+      return;
+    }
+  } catch (e) {}
+  beep(440, 0.28, 'sine', 0.15);
+}
 let settings = {};
 function loadSettings(){
   settings = JSON.parse(JSON.stringify(DEF_SETTINGS));
@@ -285,10 +308,48 @@ const HOWTO = {
   span: '<ul><li>数字一个接一个出现，然后输入</li><li><b>顺序</b>模式：按原顺序输入；<b>倒序</b>模式：从最后一个往前输入（更难）</li><li>答对长度 +1，答错消耗一次机会，错 3 次结束</li></ul>',
 };
 const INTRO_EXTRA = {
-  nback: () => { const s = settings.nback; return '<label>N 步数<select id="nb-n">' + optSel([1,2,3,4,5], s.n) + '</select></label><label>节奏<select id="nb-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label><label>轮数<select id="nb-count">' + optSel([20,30,40], s.count) + '</select></label>'; },
-  dual: () => { const s = settings.dual; return '<label>N 步数<select id="db-n">' + optSel([1,2,3,4,5], s.n) + '</select></label><label>轮数<select id="db-count">' + optSel([20,30], s.count) + '</select></label>'; },
-  mix: () => { const s = settings.mix; return '<label>N 步数<select id="mx-n">' + optSel([1,2,3,4,5], s.n) + '</select></label><label>节奏<select id="mx-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label><label>轮数<select id="mx-count">' + optSel([20,30,40], s.count) + '</select></label>'; },
-  span: () => { const s = settings.span; return '<label>模式<select id="ds-mode">' + optSel(['fwd','back'], s.mode, v => v === 'fwd' ? '顺序' : '倒序（更难）') + '</select></label><label>起始长度<select id="ds-start">' + optSel([3,4,5], s.start) + '</select></label>'; },
+  nback: () => {
+    const s = settings.nback;
+    const nOpts = s.mode === 'adaptive'
+      ? '<label>当前档位<select id="nb-n" disabled><option>' + s.level + '（自适应）</option></select></label>'
+      : '<label>N 步数<select id="nb-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
+    return nOpts
+      + '<label>难度<select id="nb-mode">' + optSel(['manual','adaptive'], s.mode, v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
+      + '<label>刺激<select id="nb-stim">' + optSel(['num','letter','color','emoji'], s.stim, v => ({num:'数字',letter:'字母',color:'颜色',emoji:'表情'})[v]) + '</select></label>'
+      + '<label>节奏<select id="nb-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label>'
+      + '<label>轮数<select id="nb-count">' + optSel([20,30,40], s.count) + '</select></label>';
+  },
+  dual: () => {
+    const s = settings.dual;
+    const nOpts = s.mode === 'adaptive'
+      ? '<label>当前档位<select id="db-n" disabled><option>' + s.level + '（自适应）</option></select></label>'
+      : '<label>N 步数<select id="db-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
+    return nOpts
+      + '<label>难度<select id="db-mode">' + optSel(['manual','adaptive'], s.mode, v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
+      + '<label>听觉刺激<select id="db-stim">' + optSel(['num','letter'], s.stim, v => ({num:'数字',letter:'字母'})[v]) + '</select></label>'
+      + '<label>轮数<select id="db-count">' + optSel([20,30], s.count) + '</select></label>';
+  },
+  mix: () => {
+    const s = settings.mix;
+    const nOpts = s.mode === 'adaptive'
+      ? '<label>当前档位<select id="mx-n" disabled><option>' + s.level + '（自适应）</option></select></label>'
+      : '<label>N 步数<select id="mx-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
+    return nOpts
+      + '<label>难度<select id="mx-mode">' + optSel(['manual','adaptive'], s.mode, v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
+      + '<label>刺激<select id="mx-stim">' + optSel(['num','letter','color','emoji'], s.stim, v => ({num:'数字',letter:'字母',color:'颜色',emoji:'表情'})[v]) + '</select></label>'
+      + '<label>节奏<select id="mx-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label>'
+      + '<label>轮数<select id="mx-count">' + optSel([20,30,40], s.count) + '</select></label>';
+  },
+  span: () => {
+    const s = settings.span;
+    const startOpts = s.adapt
+      ? '<label>当前起始<select id="ds-start" disabled><option>' + s.level + ' 位（自适应）</option></select></label>'
+      : '<label>起始长度<select id="ds-start">' + optSel([3,4,5], s.start) + '</select></label>';
+    return startOpts
+      + '<label>难度<select id="ds-adapt">' + optSel(['manual','adaptive'], s.adapt ? 'adaptive' : 'manual', v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
+      + '<label>刺激<select id="ds-stim">' + optSel(['num','letter'], s.stim, v => ({num:'数字',letter:'字母'})[v]) + '</select></label>'
+      + '<label>模式<select id="ds-mode">' + optSel(['fwd','back'], s.mode, v => v === 'fwd' ? '顺序' : '倒序（更难）') + '</select></label>';
+  },
 };
 
 /* ============ 首页 ============ */
@@ -414,7 +475,10 @@ const NB = {
   n: 2, trials: 20, onMs: 1000, offMs: 600, minN: 1, maxN: 5,
   seq: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false,
   start(){
-    const nSel = $('#nb-n'); if (nSel) NB.n = +nSel.value;
+    const mSel = $('#nb-mode'); if (mSel) settings.nback.mode = mSel.value;
+    const stSel = $('#nb-stim'); if (stSel) settings.nback.stim = stSel.value;
+    const nSel = $('#nb-n');
+    if (nSel) NB.n = settings.nback.mode === 'adaptive' ? settings.nback.level : +nSel.value;
     const spd = $('#nb-speed');
     if (spd) {
       const v = spd.value;
@@ -422,13 +486,14 @@ const NB = {
       NB.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
     }
     const cSel = $('#nb-count'); if (cSel) NB.trials = +cSel.value;
-    settings.nback = { n: NB.n, speed: spd ? spd.value : 'normal', count: NB.trials };
+    settings.nback = Object.assign({}, settings.nback, { n: NB.n, speed: spd ? spd.value : 'normal', count: NB.trials });
     saveSettings();
+    NB.pool = stimPool('nback');
     NB.seq = []; NB.log = []; NB.idx = 0; NB.phase = 'idle';
     for (let i = 0; i < NB.trials; i++){
       let d;
       if (i >= NB.n && Math.random() < 0.3) d = NB.seq[i - NB.n];
-      else { do { d = randInt(0, 9); } while (i >= NB.n && d === NB.seq[i - NB.n]); }
+      else { do { d = pick(NB.pool); } while (i >= NB.n && d === NB.seq[i - NB.n]); }
       NB.seq.push(d);
     }
     NB.stats = { hits: 0, fa: 0, matches: 0, misses: 0 };
@@ -436,11 +501,11 @@ const NB = {
     $('#play').innerHTML = playHTML(`
       <div class="nb-wrap">
         <div class="nb-top">
-          <span class="nb-badge" id="nb-badge">N = ${NB.n}</span>
+          <span class="nb-badge" id="nb-badge">N = ${NB.n}${settings.nback.mode === 'adaptive' ? ' · 自适应' : ''}</span>
           <span class="nb-progress" id="nb-prog">0 / ${NB.trials}</span>
         </div>
         <div id="nb-display" class="nb-display">·</div>
-        <div class="nb-hint">当前数字等于 N 步前的数字时，点「匹配」或按 <kbd>空格</kbd></div>
+        <div class="nb-hint">当前刺激等于 N 步前的刺激时，点「匹配」或按 <kbd>空格</kbd></div>
         <button class="btn big" id="nb-btn">匹配</button>
         <div class="nb-stats"><span id="nb-st-hits">命中 0</span><span id="nb-st-fa">误报 0</span><span id="nb-st-miss">漏报 0</span></div>
       </div>`);
@@ -490,6 +555,16 @@ function nbFinish(){
   const st = NB.stats;
   st.misses = st.matches - st.hits;
   const score = st.hits * (5 + NB.n * 2) - st.fa * 5 + NB.n * 20;
+  // 跨局自适应：命中率 >=80% 升一档，<=50% 降一档
+  let levelNote = '';
+  if (settings.nback.mode === 'adaptive') {
+    const acc = st.matches ? st.hits / st.matches : 0;
+    const oldLevel = settings.nback.level;
+    if (acc >= 0.8) settings.nback.level = Math.min(5, oldLevel + 1);
+    else if (acc <= 0.5) settings.nback.level = Math.max(1, oldLevel - 1);
+    if (settings.nback.level !== oldLevel) levelNote = `命中率 ${Math.round(acc * 100)}% → 下一局 N=${settings.nback.level}`;
+    saveSettings();
+  }
   finishGame('nback', {
     score: score,
     title: 'N-Back 完成！',
@@ -501,7 +576,9 @@ function nbFinish(){
       ['N 步数', NB.n],
       ['得分', score]
     ],
-    tip: '整局固定 ' + NB.n + '-back 稳定发挥就是进步。想加码？下次开赛把 N 调高一档。'
+    tip: levelNote || (settings.nback.mode === 'adaptive'
+      ? '自适应模式：命中率 80% 以上下一局自动升档，50% 以下降档。'
+      : '整局固定 ' + NB.n + '-back 稳定发挥就是进步。想加码？下次开赛把 N 调高一档。')
   });
 }
 
@@ -510,7 +587,10 @@ const MX = {
   n: 2, trials: 20, onMs: 1000, offMs: 600, minN: 1, maxN: 5,
   seq: [], mods: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false,
   start(){
-    const nSel = $('#mx-n'); if (nSel) MX.n = +nSel.value;
+    const mSel = $('#mx-mode'); if (mSel) settings.mix.mode = mSel.value;
+    const stSel = $('#mx-stim'); if (stSel) settings.mix.stim = stSel.value;
+    const nSel = $('#mx-n');
+    if (nSel) MX.n = settings.mix.mode === 'adaptive' ? settings.mix.level : +nSel.value;
     const spd = $('#mx-speed');
     if (spd) {
       const v = spd.value;
@@ -518,13 +598,14 @@ const MX = {
       MX.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
     }
     const cSel = $('#mx-count'); if (cSel) MX.trials = +cSel.value;
-    settings.mix = { n: MX.n, speed: spd ? spd.value : 'normal', count: MX.trials };
+    settings.mix = Object.assign({}, settings.mix, { n: MX.n, speed: spd ? spd.value : 'normal', count: MX.trials });
     saveSettings();
+    MX.pool = stimPool('mix');
     MX.seq = []; MX.mods = []; MX.log = []; MX.idx = 0; MX.phase = 'idle';
     for (let i = 0; i < MX.trials; i++){
       let d;
       if (i >= MX.n && Math.random() < 0.3) d = MX.seq[i - MX.n];
-      else { do { d = randInt(0, 9); } while (i >= MX.n && d === MX.seq[i - MX.n]); }
+      else { do { d = pick(MX.pool); } while (i >= MX.n && d === MX.seq[i - MX.n]); }
       MX.seq.push(d);
       MX.mods.push(Math.random() < 0.5 ? 'vis' : 'aud');
     }
@@ -533,11 +614,11 @@ const MX = {
     $('#play').innerHTML = playHTML(`
       <div class="nb-wrap">
         <div class="nb-top">
-          <span class="nb-badge" id="mx-badge">N = ${MX.n}</span>
+          <span class="nb-badge" id="mx-badge">N = ${MX.n}${settings.mix.mode === 'adaptive' ? ' · 自适应' : ''}</span>
           <span class="nb-progress" id="mx-prog">0 / ${MX.trials}</span>
         </div>
         <div id="mx-display" class="nb-display mx-display">·</div>
-        <div class="nb-hint">数字可能<b>显示</b>也可能<b>播报</b>（🔊）—— 不管哪种，与 N 步前相同就按 <kbd>空格</kbd></div>
+        <div class="nb-hint">刺激可能<b>显示</b>也可能<b>播报</b>（🔊）—— 不管哪种，与 N 步前相同就按 <kbd>空格</kbd></div>
         <button class="btn big" id="mx-btn">匹配</button>
         <div class="nb-stats"><span id="mx-st-hits">命中 0</span><span id="mx-st-fa">误报 0</span><span id="mx-st-miss">漏报 0</span></div>
       </div>`);
@@ -559,7 +640,7 @@ function mxNext(){
   } else {
     dis.textContent = '🔊';
     dis.dataset.mode = 'aud';
-    speakDigit(MX.seq[i]);
+    if (settings.mix.stim === 'num') speakDigit(MX.seq[i]); else speakStim(MX.seq[i]);
   }
   dis.classList.add('on');
   MX.phase = 'on';
@@ -595,6 +676,15 @@ function mxFinish(){
   const st = MX.stats;
   st.misses = st.matches - st.hits;
   const score = st.hits * (5 + MX.n * 2) - st.fa * 5 + MX.n * 20;
+  let levelNote = '';
+  if (settings.mix.mode === 'adaptive') {
+    const acc = st.matches ? st.hits / st.matches : 0;
+    const oldLevel = settings.mix.level;
+    if (acc >= 0.8) settings.mix.level = Math.min(5, oldLevel + 1);
+    else if (acc <= 0.5) settings.mix.level = Math.max(1, oldLevel - 1);
+    if (settings.mix.level !== oldLevel) levelNote = `命中率 ${Math.round(acc * 100)}% → 下一局 N=${settings.mix.level}`;
+    saveSettings();
+  }
   finishGame('mix', {
     score: score,
     title: '模态切换 N-Back 完成！',
@@ -606,7 +696,9 @@ function mxFinish(){
       ['N 步数', MX.n],
       ['得分', score]
     ],
-    tip: '视觉和听觉来回切换，逼大脑把两种通道的数字存进同一条记忆线。这是 N-Back 家族里最需要「分心也能记住」的版本。'
+    tip: levelNote || (settings.mix.mode === 'adaptive'
+      ? '自适应模式：命中率 80% 以上下一局自动升档，50% 以下降档。'
+      : '视觉和听觉来回切换，逼大脑把两种通道的刺激存进同一条记忆线。这是 N-Back 家族里最需要「分心也能记住」的版本。')
   });
 }
 /* ============ 游戏 2：双 N-Back ============ */
@@ -616,15 +708,19 @@ const DB = {
   stats: null, posMatch: false, digMatch: false,
   posDone: false, digDone: false,
   start(){
-    const nSel = $('#db-n'); if (nSel) DB.n = +nSel.value;
+    const mSel = $('#db-mode'); if (mSel) settings.dual.mode = mSel.value;
+    const stSel = $('#db-stim'); if (stSel) settings.dual.stim = stSel.value;
+    const nSel = $('#db-n');
+    if (nSel) DB.n = settings.dual.mode === 'adaptive' ? settings.dual.level : +nSel.value;
     const cSel = $('#db-count'); if (cSel) DB.trials = +cSel.value;
-    settings.dual = { n: DB.n, count: DB.trials };
+    settings.dual = Object.assign({}, settings.dual, { n: DB.n, count: DB.trials });
     saveSettings();
+    DB.pool = stimPool('dual');
     DB.pos = []; DB.digs = []; DB.log = []; DB.idx = 0; DB.phase = 'idle';
     for (let i = 0; i < DB.trials; i++){
       let p, d;
       if (i >= DB.n && Math.random() < 0.25) p = DB.pos[i - DB.n]; else p = randInt(0, 8);
-      if (i >= DB.n && Math.random() < 0.25) d = DB.digs[i - DB.n]; else d = randInt(0, 9);
+      if (i >= DB.n && Math.random() < 0.25) d = DB.digs[i - DB.n]; else { do { d = pick(DB.pool); } while (i >= DB.n && d === DB.digs[i - DB.n]); }
       DB.pos.push(p); DB.digs.push(d);
     }
     DB.stats = { posHits: 0, posMiss: 0, posFA: 0, digHits: 0, digMiss: 0, digFA: 0 };
@@ -633,7 +729,7 @@ const DB = {
     $('#play').innerHTML = playHTML(`
       <div class="dual-wrap">
         <div class="nb-top">
-          <span class="nb-badge" id="db-badge">N = ${DB.n}</span>
+          <span class="nb-badge" id="db-badge">N = ${DB.n}${settings.dual.mode === 'adaptive' ? ' · 自适应' : ''}</span>
           <span class="nb-progress" id="db-prog">0 / ${DB.trials}</span>
         </div>
         <div class="dual-grid" id="db-grid">
@@ -641,13 +737,13 @@ const DB = {
         </div>
         <div class="dual-btns">
           <button class="dual-btn pos" id="db-pos">位置匹配 <kbd>空格</kbd></button>
-          <button class="dual-btn num" id="db-num">数字匹配 <kbd>Enter</kbd></button>
+          <button class="dual-btn num" id="db-num">${settings.dual.stim === 'letter' ? '字母匹配' : '数字匹配'} <kbd>Enter</kbd></button>
         </div>
-        <div class="dual-hint">位置与 N 步前相同 → 位置匹配；数字相同 → 数字匹配；两个都相同就都按</div>
+        <div class="dual-hint">位置与 N 步前相同 → 位置匹配；刺激相同 → ${settings.dual.stim === 'letter' ? '字母匹配' : '数字匹配'}；两个都相同就都按</div>
         <div class="dual-stats">
-          <span id="db-st-pos">位置 0/0</span><span id="db-st-dig">数字 0/0</span><span id="db-st-fa">误报 0</span>
+          <span id="db-st-pos">位置 0/0</span><span id="db-st-dig">${settings.dual.stim === 'letter' ? '字母' : '数字'} 0/0</span><span id="db-st-fa">误报 0</span>
         </div>
-        <div class="dual-audio-note">🔊 数字通过语音播报（无声卡时用音高表示：数字越大音越高）</div>
+        <div class="dual-audio-note">🔊 刺激通过语音播报（无声卡时用音高表示）</div>
       </div>`);
     $('#db-pos').addEventListener('click', () => dbPress('pos'));
     $('#db-num').addEventListener('click', () => dbPress('dig'));
@@ -663,7 +759,7 @@ function dbNext(){
   DB.posDone = false; DB.digDone = false;
   const cell = document.querySelector('.dual-cell[data-i="' + DB.pos[i] + '"]');
   cell.classList.add('lit');
-  speakDigit(DB.digs[i]);
+  if (settings.dual.stim === 'num') speakDigit(DB.digs[i]); else speakStim(DB.digs[i]);
   DB.phase = 'on';
   $('#db-prog').textContent = (i + 1) + ' / ' + DB.trials;
   setT('db', () => {
@@ -710,17 +806,30 @@ function dbFinish(){
   const st = DB.stats;
   const fa = st.posFA + st.digFA;
   const score = (st.posHits + st.digHits) * 10 - fa * 5 + DB.n * 20;
+  let levelNote = '';
+  if (settings.dual.mode === 'adaptive') {
+    const totalMatch = st.posMiss + st.digMiss;
+    const totalHit = st.posHits + st.digHits;
+    const acc = totalMatch ? totalHit / totalMatch : 0;
+    const oldLevel = settings.dual.level;
+    if (acc >= 0.8) settings.dual.level = Math.min(5, oldLevel + 1);
+    else if (acc <= 0.5) settings.dual.level = Math.max(1, oldLevel - 1);
+    if (settings.dual.level !== oldLevel) levelNote = `综合命中率 ${Math.round(acc * 100)}% → 下一局 N=${settings.dual.level}`;
+    saveSettings();
+  }
   finishGame('dual', {
     score: score,
     title: '双 N-Back 完成！',
     rows: [
       ['位置命中', st.posHits + ' / ' + st.posMiss],
-      ['数字命中', st.digHits + ' / ' + st.digMiss],
+      [settings.dual.stim === 'letter' ? '字母命中' : '数字命中', st.digHits + ' / ' + st.digMiss],
       ['误报', fa],
       ['N 步数', DB.n],
       ['得分', score]
     ],
-    tip: '双通道同时命中 ' + DB.n + '-back 是工作记忆的高阶形态。每天一轮，坚持两周再看变化。'
+    tip: levelNote || (settings.dual.mode === 'adaptive'
+      ? '自适应模式：综合命中率 80% 以上下一局自动升档，50% 以下降档。'
+      : '双通道同时命中 ' + DB.n + '-back 是工作记忆的高阶形态。每天一轮，坚持两周再看变化。')
   });
 }
 
@@ -729,10 +838,14 @@ const DS = {
   mode: 'fwd', startLen: 3, len: 3, strikes: 0, score: 0, rounds: 0, maxLen: 2,
   list: [], idx: 0, phase: 'idle', digitMs: 900, gapMs: 300,
   start(){
-    const mSel = $('#ds-mode'); if (mSel) DS.mode = mSel.value;
-    const sSel = $('#ds-start'); if (sSel) DS.startLen = +sSel.value;
-    settings.span = { mode: DS.mode, start: DS.startLen };
+    const aSel = $('#ds-adapt'); if (aSel) settings.span.adapt = aSel.value === 'adaptive';
+    const stSel = $('#ds-stim'); if (stSel) settings.span.stim = stSel.value;
+    const mSel = $('#ds-mode'); if (mSel) settings.span.mode = mSel.value;
+    const sSel = $('#ds-start');
+    if (sSel) DS.startLen = settings.span.adapt ? settings.span.level : +sSel.value;
+    settings.span = Object.assign({}, settings.span, { start: DS.startLen });
     saveSettings();
+    DS.pool = stimPool('span');
     DS.len = DS.startLen; DS.strikes = 0; DS.score = 0; DS.rounds = 0; DS.maxLen = DS.startLen - 1; DS.phase = 'idle';
     $('#play').innerHTML = playHTML(`
       <div class="span-wrap">
@@ -743,10 +856,10 @@ const DS = {
         </div>
         <div class="span-display" id="ds-display">·</div>
         <div class="span-input-row">
-          <input id="ds-input" inputmode="numeric" autocomplete="off" placeholder="输入数字…" disabled/>
+          <input id="ds-input" autocomplete="off" placeholder="${settings.span.stim === 'letter' ? '输入字母…' : '输入数字…'}" disabled/>
           <button class="btn" id="ds-submit" disabled>确定</button>
         </div>
-        <div class="span-hint" id="ds-hint">${DS.mode === 'fwd' ? '记住出现的数字' : '记住出现的数字（倒序输入）'}</div>
+        <div class="span-hint" id="ds-hint">${DS.mode === 'fwd' ? '记住出现的' + (settings.span.stim === 'letter' ? '字母' : '数字') : '记住出现的' + (settings.span.stim === 'letter' ? '字母' : '数字') + '（倒序输入）'}</div>
       </div>`);
     $('#ds-input').addEventListener('keydown', e => { if (e.key === 'Enter') dsSubmit(); });
     $('#ds-submit').addEventListener('click', dsSubmit);
@@ -761,7 +874,7 @@ function updateDsStrikes(){
 function dsNewRound(){
   DS.phase = 'show'; DS.idx = 0;
   DS.list = [];
-  for (let k = 0; k < DS.len; k++) DS.list.push(randInt(1, 9));
+  for (let k = 0; k < DS.len; k++) DS.list.push(pick(DS.pool));
   $('#ds-len').textContent = DS.len;
   $('#ds-input').value = '';
   $('#ds-input').disabled = true;
@@ -772,9 +885,11 @@ function dsNewRound(){
 function dsShowNext(){
   if (DS.idx >= DS.list.length) return dsInputPhase();
   const dis = $('#ds-display');
-  dis.textContent = DS.list[DS.idx];
+  const item = DS.list[DS.idx];
+  dis.textContent = item;
   dis.className = 'span-display on';
-  beep(500 + DS.list[DS.idx] * 90, 0.1, 'sine', 0.07);
+  const tone = settings.span.stim === 'num' ? 500 + item * 90 : 600 + (String(item).charCodeAt(0) % 10) * 60;
+  beep(tone, 0.1, 'sine', 0.07);
   setT('ds-show', () => {
     dis.textContent = '';
     DS.idx++;
@@ -819,6 +934,15 @@ function dsSubmit(){
 function dsFinish(){
   const score = DS.score + DS.maxLen * 5;
   const totalRounds = DS.rounds + DS.strikes;
+  let levelNote = '';
+  if (settings.span.adapt) {
+    const oldLevel = settings.span.level;
+    // 有剩余机会且到了最长 → 下一局 +1；否则保持（避免反复降）
+    if (DS.strikes < 3) settings.span.level = Math.min(12, oldLevel + 1);
+    else settings.span.level = Math.max(2, oldLevel - 1);
+    if (settings.span.level !== oldLevel) levelNote = `本局最长 ${DS.maxLen} 位 → 下一局从 ${settings.span.level} 位开始`;
+    saveSettings();
+  }
   finishGame('span', {
     score: score,
     title: '数字广度结束',
@@ -828,7 +952,9 @@ function dsFinish(){
       ['剩余机会', Math.max(0, 3 - DS.strikes)],
       ['得分', score]
     ],
-    tip: '普通人顺序广度 7±2、倒序约 5-6。你能稳定倒序背到 ' + DS.maxLen + ' 位了吗？每周复测一次，看曲线往上走。'
+    tip: levelNote || (settings.span.adapt
+      ? '自适应模式：答到最长且未用尽机会，下一局自动 +1 位。'
+      : '普通人顺序广度 7±2、倒序约 5-6。你能稳定倒序背到 ' + DS.maxLen + ' 位了吗？每周复测一次，看曲线往上走。')
   });
 }
 
