@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="dark"/>
+<title>工作记忆训练营 WM Gym</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E"/>
+<style>
+:root{
+  --bg1:#0b1220; --bg2:#1e1b4b; --bg3:#312e81;
+  --card:rgba(30,41,59,.72); --card-solid:#1e293b;
+  --line:rgba(148,163,184,.18);
+  --txt:#e2e8f0; --sub:#94a3b8;
+  --acc:#22d3ee; --ok:#34d399; --bad:#f87171; --warn:#fbbf24; --purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  background:linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+  background-attachment:fixed;
+  color:var(--txt); min-height:100vh; line-height:1.6;
+}
+#app{max-width:760px;margin:0 auto;padding:18px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;position:sticky;top:0;z-index:20;background:rgba(11,18,32,.72);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.logo{font-weight:800;font-size:18px;letter-spacing:.5px}
+.hright{display:flex;gap:8px;align-items:center}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--sub);cursor:pointer}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin-bottom:16px;backdrop-filter:blur(6px)}
+.hero h1{font-size:26px}
+.hero .sub{margin-top:6px}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.science h3{margin-bottom:8px}
+.science p{margin-bottom:8px;color:#cbd5e1}
+.science .sub{color:var(--sub);font-size:13px}
+.sec-title{font-size:17px;margin:20px 2px 12px;color:var(--sub)}
+.game-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:600px){.game-grid{grid-template-columns:1fr 1fr}}
+.game-card{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:18px;padding:16px;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease}
+.game-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.gc-icon{font-size:30px;flex:none}
+.gc-body{flex:1;min-width:0}
+.gc-body h3{font-size:16px}
+.gc-body p{font-size:13px;color:var(--sub);margin:2px 0 6px}
+.gc-best{font-size:12px;color:var(--acc)}
+.gc-go{color:var(--sub);font-size:14px;flex:none}
+.tip-card{font-size:14px;color:#cbd5e1}
+.tip-card b{color:var(--txt)}
+.btn{background:linear-gradient(135deg,var(--acc),#0ea5e9);color:#06121f;border:none;border-radius:14px;padding:12px 22px;font-size:15px;font-weight:700;cursor:pointer;transition:filter .15s, transform .1s}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:scale(.97)}
+.btn.big{width:100%;padding:16px;font-size:17px;border-radius:16px}
+.btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.row{display:flex;gap:10px;margin-top:18px}
+.row .btn{flex:1}
+.settings{display:flex;gap:14px;flex-wrap:wrap;background:rgba(255,255,255,.04);border:1px dashed var(--line);border-radius:14px;padding:14px;margin:14px 0}
+.settings label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--sub)}
+.settings select{background:var(--card-solid);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px}
+.howto{margin:14px 0}
+.howto h3{font-size:14px;color:var(--sub);margin-bottom:6px}
+.howto ul{padding-left:18px}
+.howto li{margin:4px 0;font-size:14px}
+.result-card{text-align:center;--accent:#22d3ee}
+.result-icon{font-size:44px}
+.result-card h2{margin-top:6px}
+.score-big{font-size:56px;font-weight:900;color:var(--accent);line-height:1.1}
+.score-big span{font-size:18px;font-weight:600;color:var(--sub)}
+.best-tag{display:inline-block;background:rgba(251,191,36,.15);color:var(--warn);border:1px solid rgba(251,191,36,.4);border-radius:999px;padding:3px 12px;font-size:13px;margin:8px 0}
+.sub{color:var(--sub);font-size:13px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:16px}
+.stat{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:10px 6px}
+.stat-v{font-size:20px;font-weight:800}
+.stat-k{font-size:12px;color:var(--sub)}
+.tip{margin-top:14px;font-size:13px;color:#cbd5e1;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:10px 12px}
+kbd{background:#0f172a;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-size:12px;font-family:ui-monospace,monospace}
+.play-top{display:flex;justify-content:flex-end;margin-bottom:8px}
+.quit{background:transparent;border:1px solid var(--line);color:var(--sub);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:14px}
+.quit:hover{color:var(--bad);border-color:var(--bad)}
+.loading{text-align:center;color:var(--sub);padding:60px 0}
+.screen{display:none}
+.screen.active{display:block;animation:fadeIn .25s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes flashOkA{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.5)}100%{transform:scale(1)}}
+
+/* ---- N-Back ---- */
+.nb-wrap{text-align:center}
+.nb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.nb-badge{display:inline-block;padding:4px 14px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);color:var(--acc);font-weight:700;font-size:14px;transition:all .2s}
+.nb-badge.up{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.4);color:var(--warn);animation:flashOkA .4s}
+.nb-progress{font-size:13px;color:var(--sub)}
+.nb-display{width:160px;height:160px;margin:10px auto 16px;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;border-radius:28px;background:rgba(255,255,255,.05);border:2px solid var(--line);color:var(--sub);transition:all .15s}
+.nb-display.on{color:var(--acc);border-color:var(--acc);box-shadow:0 0 30px rgba(34,211,238,.35);background:rgba(34,211,238,.08)}
+.nb-display.correct{box-shadow:0 0 34px rgba(52,211,153,.6);border-color:var(--ok);color:var(--ok)}
+.nb-display.wrong{box-shadow:0 0 34px rgba(248,113,113,.6);border-color:var(--bad);color:var(--bad);animation:shake .3s}
+.nb-display.mx-display.on[data-mode="aud"]{color:var(--purple);border-color:var(--purple);box-shadow:0 0 30px rgba(167,139,250,.4);background:rgba(167,139,250,.1)}
+.nb-hint{font-size:14px;color:var(--sub);margin-bottom:14px}
+.nb-stats{display:flex;justify-content:center;gap:16px;margin-top:14px;font-size:13px;color:var(--sub)}
+
+/* ---- Dual N-Back ---- */
+.dual-wrap{text-align:center}
+.dual-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:12px auto}
+.dual-cell{aspect-ratio:1;background:rgba(255,255,255,.05);border:2px solid var(--line);border-radius:14px;opacity:.35;transition:all .12s}
+.dual-cell.lit{opacity:1;background:rgba(34,211,238,.25);border-color:var(--acc);box-shadow:0 0 22px rgba(34,211,238,.5)}
+.dual-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;margin:12px auto}
+.dual-btn{padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:2px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);transition:transform .1s, background .15s}
+.dual-btn.pos{border-color:rgba(34,211,238,.5);color:var(--acc)}
+.dual-btn.num{border-color:rgba(167,139,250,.5);color:var(--purple)}
+.dual-btn:active{transform:scale(.96)}
+.dual-btn.ok{background:rgba(52,211,153,.2);border-color:var(--ok)}
+.dual-btn.err{background:rgba(248,113,113,.2);border-color:var(--bad);animation:shake .3s}
+.dual-hint{text-align:center;font-size:13px;color:var(--sub);margin:8px 0}
+.dual-stats{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--sub);margin-top:10px}
+.dual-audio-note{font-size:12px;color:#64748b;margin-top:6px}
+
+/* ---- 数字广度 ---- */
+.span-wrap{text-align:center}
+.span-info{display:flex;justify-content:center;gap:22px;font-size:14px;margin-bottom:10px}
+.span-info b{color:var(--acc)}
+.span-display{height:110px;display:flex;align-items:center;justify-content:center;font-size:76px;font-weight:900;color:var(--acc);letter-spacing:8px}
+.span-display.on{animation:pop .2s}
+.span-display.correct{color:var(--ok)}
+.span-display.wrong{color:var(--bad);animation:shake .3s}
+.span-input-row{display:flex;gap:10px;max-width:400px;margin:12px auto}
+#ds-input{flex:1;background:var(--card-solid);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:12px 16px;font-size:22px;letter-spacing:5px;text-align:center;font-family:ui-monospace,monospace}
+#ds-input:disabled{opacity:.35}
+.span-hint{font-size:13px;color:var(--sub);margin:8px 0;min-height:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🧠 工作记忆训练营</div>
+  <div class="hright">
+    <span id="streak-chip" class="chip">🔥 连续 0 天</span>
+    <button id="sound-btn" class="chip" title="声音开关">🔊</button>
+  </div>
+</header>
+<div id="app">
+  <section id="home" class="screen active"></section>
+  <section id="intro" class="screen"></section>
+  <section id="play" class="screen"></section>
+  <section id="result" class="screen"></section>
+</div>
+<script>
+'use strict';
+
+/* ============ 工具 ============ */
+const $ = (s) => document.querySelector(s);
+function randInt(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+/* ============ 本地存档 ============ */
+const STORE_KEY = 'pfc_trainer_v1';
+let S = { streak: 0, lastDate: '', totalSessions: 0, dailyCount: 0, best: {} };
+function loadS(){
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
+}
+function saveS(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+function todayStr(d){
+  d = d || new Date();
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+function registerSession(){
+  const t = todayStr();
+  if (S.lastDate === t) { S.totalSessions++; S.dailyCount++; }
+  else {
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    S.streak = (S.lastDate === todayStr(y)) ? S.streak + 1 : 1;
+    S.lastDate = t; S.totalSessions++; S.dailyCount = 1;
+  }
+  saveS();
+}
+function bestFor(g){ return S.best[g] || null; }
+function setBest(g, v){
+  const b = bestFor(g);
+  if (!b || v.score > b.score) { S.best[g] = v; saveS(); }
+}
+
+/* ============ 音效 ============ */
+let actx = null, muted = false;
+function ensureAudio(){
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (actx && actx.state === 'suspended') actx.resume();
+}
+function beep(freq, dur, type, vol){
+  if (muted || !actx) return;
+  try {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.12, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur);
+  } catch (e) {}
+}
+function speakDigit(d){
+  // 优先用系统语音读数字；无语音时用音高表示（数字越大音越高）
+  try {
+    if (window.speechSynthesis && speechSynthesis.getVoices().length) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(d));
+      u.rate = 1.05; u.pitch = 1;
+      speechSynthesis.speak(u);
+      return;
+    }
+  } catch (e) {}
+  beep(262 * Math.pow(2, d / 9), 0.28, 'sine', 0.15);
+}
+
+/* ============ 屏幕与定时器 ============ */
+let timers = {};
+function setT(k, fn, ms, interval){
+  if (timers[k]) { clearTimeout(timers[k]); clearInterval(timers[k]); }
+  timers[k] = interval ? setInterval(fn, ms) : setTimeout(fn, ms);
+}
+function clearTimers(){
+  Object.keys(timers).forEach(k => { clearTimeout(timers[k]); clearInterval(timers[k]); });
+  timers = {};
+}
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function flash(sel, cls){
+  const e = typeof sel === 'string' ? $(sel) : sel;
+  if (!e) return;
+  e.classList.add(cls);
+  setTimeout(() => e.classList.remove(cls), 300);
+}
+function playHTML(inner){
+  return '<div class="play-top"><button class="quit" title="退出训练" onclick="quitGame()">✕</button></div>' + inner;
+}
+
+let CUR_GAME = null;
+
+/* ============ 游戏元数据 ============ */
+const GAME_META = {
+  nback: { name: 'N-Back 自适应', icon: '🔢', desc: '数字流中找「N 步前」，难度随表现自动升降', color: '#22d3ee' },
+  dual:  { name: '双 N-Back',    icon: '🧩', desc: '位置 + 声音双通道同时记，工作记忆的进阶地狱', color: '#a78bfa' },
+  mix:   { name: '模态切换 N-Back', icon: '🎭', desc: '数字在视觉/听觉间随机切换，双通道无差别记忆', color: '#f472b6' },
+  span:  { name: '数字广度',     icon: '🔗', desc: '经典跨度测验：顺序/倒序背数字，逐级加压',   color: '#34d399' },
+};
+const HOWTO = {
+  nback: '<ul><li>屏幕上依次出现数字 0–9，当<b>当前数字</b>等于 <b>N 步前</b>的数字时，按「匹配」或 <kbd>空格</kbd></li><li>系统每 10 题评估一次：命中率高就<b>自动升 N</b>，错得多就降 —— 永远把你压在刚好够得着的难度</li><li>N 最高可到 5，节奏可选「快」—— 两者叠加才是完全体</li></ul>',
+  dual: '<ul><li>每轮：3×3 方格亮一个位置，同时<b>听到一个数字</b></li><li>位置与 N 步前相同 → 按「位置匹配」（<kbd>空格</kbd>）；数字相同 → 按「数字匹配」（<kbd>Enter</kbd>）</li><li>两个都相同就两个都按 —— 视觉 + 听觉双通道同时工作，这就是 Jaeggi 研究的双 N-Back</li><li>建议从 N=1 开始，它比单通道难得多；数字用语音报出，无语音时用音高表示</li></ul>',
+  mix: '<ul><li>每个数字随机以<b>显示</b>（屏幕）或<b>播报</b>（🔊 声音）出现，两种各占约一半</li><li>不管哪种通道，只要<b>当前数字</b>等于 <b>N 步前</b>的数字就按「匹配」</li><li>听过的要记得住，看过的也要记得住 —— 双通道记忆 + 模态切换，比纯视觉 N-Back 更难</li></ul>',
+  span: '<ul><li>数字一个接一个出现，然后输入</li><li><b>顺序</b>模式：按原顺序输入；<b>倒序</b>模式：从最后一个往前输入（更难）</li><li>答对长度 +1，答错消耗一次机会，错 3 次结束</li></ul>',
+};
+const INTRO_EXTRA = {
+  nback: () => '<label>起始 N<select id="nb-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="nb-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="nb-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
+  dual: () => '<label>起始 N<select id="db-n"><option value="1" selected>1 · 推荐</option><option value="2">2</option><option value="3">3</option></select></label><label>轮数<select id="db-count"><option value="20" selected>20</option><option value="30">30</option></select></label>',
+  mix: () => '<label>起始 N<select id="mx-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="mx-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="mx-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
+  span: () => '<label>模式<select id="ds-mode"><option value="fwd" selected>顺序</option><option value="back">倒序（更难）</option></select></label><label>起始长度<select id="ds-start"><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>',
+};
+
+/* ============ 首页 ============ */
+function renderChips(){
+  $('#streak-chip').textContent = '🔥 连续 ' + S.streak + ' 天';
+}
+function renderHome(){
+  const todayCount = (S.lastDate === todayStr()) ? S.dailyCount : 0;
+  $('#home').innerHTML = `
+    <div class="hero card">
+      <h1>🧠 工作记忆训练营</h1>
+      <p class="sub">只练一件事：工作记忆 —— 每天 10–15 分钟，难度自动升级</p>
+      <div class="hero-chips">
+        <span class="chip">🔥 连续 ${S.streak} 天</span>
+        <span class="chip">📅 今日训练 ${todayCount} 次</span>
+        <span class="chip">🏋️ 累计 ${S.totalSessions} 次</span>
+      </div>
+    </div>
+    <div class="card science">
+      <h3>🧬 为什么只练工作记忆？</h3>
+      <p>健忘、走神、说忘就忘 —— 这些大多指向同一个核心能力：<b>工作记忆</b>（大脑的「便签纸」，同时记住并处理几件事的能力）。它由前额叶皮层支撑，且像肌肉一样可训练。</p>
+      <p>四个游戏全部瞄准它：<b>N-Back</b>（数字流）、<b>双 N-Back</b>（视觉+听觉双通道，公认最强的训练范式）、<b>模态切换 N-Back</b>（视听随机切换）、<b>数字广度</b>（经典跨度测验）。难度自适应：大脑必须待在「刚好够得着」的挑战区，进步才持续。</p>
+      <p class="sub">有效训练的感觉是：<b>有点吃力，但不至于崩溃</b>。如果觉得轻松，说明难度该升了。</p>
+    </div>
+    <h2 class="sec-title">选择训练</h2>
+    <div class="game-grid">
+      ${Object.keys(GAME_META).map(g => {
+        const m = GAME_META[g], b = bestFor(g);
+        return `<div class="game-card" style="--accent:${m.color}" onclick="goToIntro('${g}')">
+          <div class="gc-icon">${m.icon}</div>
+          <div class="gc-body"><h3>${m.name}</h3><p>${m.desc}</p>
+          <div class="gc-best">${b ? '🏆 最佳 ' + b.score + ' 分' : '尚未练习'}</div></div>
+          <div class="gc-go">开始 ›</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card tip-card">💡 <b>训练建议：</b>双 N-Back 最累、收益也最大。每天至少一轮双 N-Back + 一轮 N-Back 或数字广度；感觉疲惫就停 —— 工作记忆训练吃的是「刚刚好」，不是「拼老命」。</div>
+  `;
+  show('home');
+  renderChips();
+}
+
+/* ============ 游戏流程 ============ */
+function goToIntro(g){
+  const meta = GAME_META[g];
+  const settings = INTRO_EXTRA[g] ? '<div class="settings">' + INTRO_EXTRA[g]() + '</div>' : '';
+  $('#intro').innerHTML = `
+    <div class="card intro-card" style="--accent:${meta.color}">
+      <div class="result-icon">${meta.icon}</div>
+      <h2>${meta.name}</h2>
+      <p class="sub">${meta.desc}</p>
+      <div class="howto"><h3>怎么玩</h3>${HOWTO[g]}</div>
+      ${settings}
+      <button class="btn big" onclick="startGame('${g}')">开始训练</button>
+      <div class="row"><button class="btn ghost" onclick="renderHome()">返回</button></div>
+    </div>`;
+  show('intro');
+}
+function startGame(g){
+  ensureAudio();
+  clearTimers();
+  CUR_GAME = g;
+  $('#play').innerHTML = '<div class="loading">准备中…</div>';
+  show('play');
+  if (g === 'nback') NB.start();
+  else if (g === 'dual') DB.start();
+  else if (g === 'mix') MX.start();
+  else if (g === 'span') DS.start();
+}
+function quitGame(){
+  clearTimers();
+  CUR_GAME = null;
+  renderHome();
+}
+function finishGame(g, data){
+  clearTimers();
+  CUR_GAME = null;
+  registerSession();
+  const prev = bestFor(g);
+  const isBest = !prev || data.score > prev.score;
+  if (isBest) setBest(g, { score: data.score, when: todayStr() });
+  $('#result').innerHTML = `
+    <div class="card result-card" style="--accent:${GAME_META[g].color}">
+      <div class="result-icon">${GAME_META[g].icon}</div>
+      <h2>${data.title}</h2>
+      <div class="score-big">${data.score}<span> 分</span></div>
+      ${isBest ? '<div class="best-tag">🏆 新纪录！</div>' : (prev ? '<div class="sub">历史最佳 ' + prev.score + ' 分</div>' : '')}
+      <div class="stat-grid">${data.rows.map(r => '<div class="stat"><div class="stat-v">' + r[1] + '</div><div class="stat-k">' + r[0] + '</div></div>').join('')}</div>
+      <div class="tip">💡 ${data.tip}</div>
+      <div class="row">
+        <button class="btn ghost" onclick="startGame('${g}')">↻ 再来一次</button>
+        <button class="btn" onclick="renderHome()">返回首页</button>
+      </div>
+    </div>`;
+  show('result');
+  renderChips();
+}
+
+/* ============ 游戏 1：N-Back 自适应 ============ */
+const NB = {
+  n: 2, trials: 20, onMs: 1000, offMs: 600, minN: 1, maxN: 5,
+  seq: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false, topN: 2,
+  start(){
+    const nSel = $('#nb-n'); if (nSel) NB.n = +nSel.value;
+    const spd = $('#nb-speed');
+    if (spd) {
+      const v = spd.value;
+      NB.onMs = v === 'slow' ? 1500 : v === 'fast' ? 700 : 1000;
+      NB.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
+    }
+    const cSel = $('#nb-count'); if (cSel) NB.trials = +cSel.value;
+    NB.seq = []; NB.log = []; NB.idx = 0; NB.phase = 'idle'; NB.topN = NB.n;
+    for (let i = 0; i < NB.trials; i++){
+      let d;
+      if (i >= NB.n && Math.random() < 0.3) d = NB.seq[i - NB.n];
+      else { do { d = randInt(0, 9); } while (i >= NB.n && d === NB.seq[i - NB.n]); }
+      NB.seq.push(d);
+    }
+    NB.stats = { hits: 0, fa: 0, matches: 0, misses: 0 };
+    NB.seq.forEach((d, i) => { if (i >= NB.n && d === NB.seq[i - NB.n]) NB.stats.matches++; });
+    $('#play').innerHTML = playHTML(`
+      <div class="nb-wrap">
+        <div class="nb-top">
+          <span class="nb-badge" id="nb-badge">N = ${NB.n}</span>
+          <span class="nb-progress" id="nb-prog">0 / ${NB.trials}</span>
+        </div>
+        <div id="nb-display" class="nb-display">·</div>
+        <div class="nb-hint">当前数字等于 N 步前的数字时，点「匹配」或按 <kbd>空格</kbd></div>
+        <button class="btn big" id="nb-btn">匹配</button>
+        <div class="nb-stats"><span id="nb-st-hits">命中 0</span><span id="nb-st-fa">误报 0</span><span id="nb-st-miss">漏报 0</span></div>
+      </div>`);
+    $('#nb-btn').addEventListener('click', nbPress);
+    nbNext();
+  }
+};
+function nbNext(){
+  if (NB.idx >= NB.trials) return nbFinish();
+  const i = NB.idx;
+  NB.curMatch = (i >= NB.n && NB.seq[i] === NB.seq[i - NB.n]);
+  NB.log.push({ isMatch: NB.curMatch, hit: false, fa: false });
+  const dis = $('#nb-display');
+  dis.textContent = NB.seq[i];
+  dis.classList.add('on');
+  beep(NB.curMatch ? 880 : 440, 0.08, 'sine', 0.06);
+  NB.phase = 'on';
+  $('#nb-prog').textContent = (i + 1) + ' / ' + NB.trials;
+  setT('nb', () => {
+    dis.textContent = '·';
+    dis.classList.remove('on');
+    NB.phase = 'off';
+    setT('nb', () => { NB.idx++; nbAdapt(); nbNext(); }, NB.offMs);
+  }, NB.onMs);
+}
+function nbPress(){
+  if (NB.phase !== 'on') return;
+  NB.phase = 'done';
+  const cur = NB.log[NB.log.length - 1];
+  if (NB.curMatch) {
+    cur.hit = true; NB.stats.hits++;
+    beep(1300, 0.12, 'square', 0.08);
+    flash('#nb-display', 'correct');
+  } else {
+    cur.fa = true; NB.stats.fa++;
+    beep(140, 0.25, 'sawtooth', 0.12);
+    flash('#nb-display', 'wrong');
+  }
+  nbStats();
+}
+function nbStats(){
+  $('#nb-st-hits').textContent = '命中 ' + NB.stats.hits;
+  $('#nb-st-fa').textContent = '误报 ' + NB.stats.fa;
+  $('#nb-st-miss').textContent = '漏报 ' + Math.max(0, NB.stats.matches - NB.stats.hits);
+}
+function nbAdapt(){
+  const recent = NB.log.slice(-10);
+  const m = recent.filter(t => t.isMatch);
+  if (!m.length) return;
+  const hitRate = m.filter(t => t.hit).length / m.length;
+  const nonM = recent.filter(t => !t.isMatch);
+  const faRate = nonM.length ? nonM.filter(t => t.fa).length / nonM.length : 0;
+  const old = NB.n;
+  if (hitRate >= 0.85 && faRate <= 0.2 && NB.n < NB.maxN) {
+    NB.n++;
+    badgeUp('⬆ N → ' + NB.n);
+  } else if ((hitRate < 0.55 || faRate > 0.35) && NB.n > NB.minN) {
+    NB.n--;
+    badgeUp('⬇ N → ' + NB.n);
+  }
+  if (NB.n > NB.topN) NB.topN = NB.n;
+  if (NB.n !== old) {
+    const b = $('#nb-badge');
+    b.classList.add('up');
+    setTimeout(() => b.classList.remove('up'), 500);
+  }
+}
+function badgeUp(txt){ const b = $('#nb-badge'); if (b) b.textContent = txt; }
+function nbFinish(){
+  const st = NB.stats;
+  st.misses = st.matches - st.hits;
+  const score = st.hits * (5 + NB.topN * 2) - st.fa * 5 + NB.topN * 20;
+  finishGame('nback', {
+    score: score,
+    title: 'N-Back 完成！',
+    rows: [
+      ['命中', st.hits + ' / ' + st.matches],
+      ['漏报', st.misses],
+      ['误报', st.fa],
+      ['命中率', st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
+      ['最高 N', NB.topN],
+      ['得分', score]
+    ],
+    tip: '命中了 ' + NB.topN + '-back 意味着工作记忆又厚了一层。下次直接从 N=' + NB.topN + ' 起步，向更高处冲。'
+  });
+}
+
+/* ============ 游戏 1.5：模态切换 N-Back（视听随机） ============ */
+const MX = {
+  n: 2, trials: 20, onMs: 1000, offMs: 600, minN: 1, maxN: 5,
+  seq: [], mods: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false, topN: 2,
+  start(){
+    const nSel = $('#mx-n'); if (nSel) MX.n = +nSel.value;
+    const spd = $('#mx-speed');
+    if (spd) {
+      const v = spd.value;
+      MX.onMs = v === 'slow' ? 1500 : v === 'fast' ? 700 : 1000;
+      MX.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
+    }
+    const cSel = $('#mx-count'); if (cSel) MX.trials = +cSel.value;
+    MX.seq = []; MX.mods = []; MX.log = []; MX.idx = 0; MX.phase = 'idle'; MX.topN = MX.n;
+    for (let i = 0; i < MX.trials; i++){
+      let d;
+      if (i >= MX.n && Math.random() < 0.3) d = MX.seq[i - MX.n];
+      else { do { d = randInt(0, 9); } while (i >= MX.n && d === MX.seq[i - MX.n]); }
+      MX.seq.push(d);
+      MX.mods.push(Math.random() < 0.5 ? 'vis' : 'aud');
+    }
+    MX.stats = { hits: 0, fa: 0, matches: 0, misses: 0 };
+    MX.seq.forEach((d, i) => { if (i >= MX.n && d === MX.seq[i - MX.n]) MX.stats.matches++; });
+    $('#play').innerHTML = playHTML(`
+      <div class="nb-wrap">
+        <div class="nb-top">
+          <span class="nb-badge" id="mx-badge">N = ${MX.n}</span>
+          <span class="nb-progress" id="mx-prog">0 / ${MX.trials}</span>
+        </div>
+        <div id="mx-display" class="nb-display mx-display">·</div>
+        <div class="nb-hint">数字可能<b>显示</b>也可能<b>播报</b>（🔊）—— 不管哪种，与 N 步前相同就按 <kbd>空格</kbd></div>
+        <button class="btn big" id="mx-btn">匹配</button>
+        <div class="nb-stats"><span id="mx-st-hits">命中 0</span><span id="mx-st-fa">误报 0</span><span id="mx-st-miss">漏报 0</span></div>
+      </div>`);
+    $('#mx-btn').addEventListener('click', mxPress);
+    mxNext();
+  }
+};
+function mxNext(){
+  if (MX.idx >= MX.trials) return mxFinish();
+  const i = MX.idx;
+  MX.curMatch = (i >= MX.n && MX.seq[i] === MX.seq[i - MX.n]);
+  MX.log.push({ isMatch: MX.curMatch, hit: false, fa: false });
+  const dis = $('#mx-display');
+  dis.classList.remove('on');
+  if (MX.mods[i] === 'vis') {
+    dis.textContent = MX.seq[i];
+    dis.dataset.mode = 'vis';
+    beep(MX.curMatch ? 880 : 440, 0.08, 'sine', 0.06);
+  } else {
+    dis.textContent = '🔊';
+    dis.dataset.mode = 'aud';
+    speakDigit(MX.seq[i]);
+  }
+  dis.classList.add('on');
+  MX.phase = 'on';
+  $('#mx-prog').textContent = (i + 1) + ' / ' + MX.trials;
+  setT('mx', () => {
+    dis.textContent = '·';
+    dis.classList.remove('on');
+    MX.phase = 'off';
+    setT('mx', () => { MX.idx++; mxAdapt(); mxNext(); }, MX.offMs);
+  }, MX.onMs);
+}
+function mxPress(){
+  if (MX.phase !== 'on') return;
+  MX.phase = 'done';
+  const cur = MX.log[MX.log.length - 1];
+  if (MX.curMatch) {
+    cur.hit = true; MX.stats.hits++;
+    beep(1300, 0.12, 'square', 0.08);
+    flash('#mx-display', 'correct');
+  } else {
+    cur.fa = true; MX.stats.fa++;
+    beep(140, 0.25, 'sawtooth', 0.12);
+    flash('#mx-display', 'wrong');
+  }
+  mxStats();
+}
+function mxStats(){
+  $('#mx-st-hits').textContent = '命中 ' + MX.stats.hits;
+  $('#mx-st-fa').textContent = '误报 ' + MX.stats.fa;
+  $('#mx-st-miss').textContent = '漏报 ' + Math.max(0, MX.stats.matches - MX.stats.hits);
+}
+function mxAdapt(){
+  const recent = MX.log.slice(-10);
+  const m = recent.filter(t => t.isMatch);
+  if (!m.length) return;
+  const hitRate = m.filter(t => t.hit).length / m.length;
+  const nonM = recent.filter(t => !t.isMatch);
+  const faRate = nonM.length ? nonM.filter(t => t.fa).length / nonM.length : 0;
+  const old = MX.n;
+  if (hitRate >= 0.85 && faRate <= 0.2 && MX.n < MX.maxN) {
+    MX.n++;
+    badgeUpMx('⬆ N → ' + MX.n);
+  } else if ((hitRate < 0.55 || faRate > 0.35) && MX.n > MX.minN) {
+    MX.n--;
+    badgeUpMx('⬇ N → ' + MX.n);
+  }
+  if (MX.n > MX.topN) MX.topN = MX.n;
+  if (MX.n !== old) {
+    const b = $('#mx-badge');
+    b.classList.add('up');
+    setTimeout(() => b.classList.remove('up'), 500);
+  }
+}
+function badgeUpMx(txt){ const b = $('#mx-badge'); if (b) b.textContent = txt; }
+function mxFinish(){
+  const st = MX.stats;
+  st.misses = st.matches - st.hits;
+  const score = st.hits * (5 + MX.topN * 2) - st.fa * 5 + MX.topN * 20;
+  finishGame('mix', {
+    score: score,
+    title: '模态切换 N-Back 完成！',
+    rows: [
+      ['命中', st.hits + ' / ' + st.matches],
+      ['漏报', st.misses],
+      ['误报', st.fa],
+      ['命中率', st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
+      ['最高 N', MX.topN],
+      ['得分', score]
+    ],
+    tip: '视觉和听觉来回切换，逼大脑把两种通道的数字存进同一条记忆线。这是 N-Back 家族里最需要「分心也能记住」的版本。'
+  });
+}
+/* ============ 游戏 2：双 N-Back ============ */
+const DB = {
+  n: 1, trials: 20, onMs: 1500, minN: 1, maxN: 3,
+  pos: [], digs: [], log: [], idx: 0, phase: 'idle',
+  stats: null, topN: 1, posMatch: false, digMatch: false,
+  posDone: false, digDone: false,
+  start(){
+    const nSel = $('#db-n'); if (nSel) DB.n = +nSel.value;
+    const cSel = $('#db-count'); if (cSel) DB.trials = +cSel.value;
+    DB.pos = []; DB.digs = []; DB.log = []; DB.idx = 0; DB.phase = 'idle'; DB.topN = DB.n;
+    for (let i = 0; i < DB.trials; i++){
+      let p, d;
+      if (i >= DB.n && Math.random() < 0.25) p = DB.pos[i - DB.n]; else p = randInt(0, 8);
+      if (i >= DB.n && Math.random() < 0.25) d = DB.digs[i - DB.n]; else d = randInt(0, 9);
+      DB.pos.push(p); DB.digs.push(d);
+    }
+    DB.stats = { posHits: 0, posMiss: 0, posFA: 0, digHits: 0, digMiss: 0, digFA: 0 };
+    DB.pos.forEach((p, i) => { if (i >= DB.n && p === DB.pos[i - DB.n]) DB.stats.posMiss++; });
+    DB.digs.forEach((d, i) => { if (i >= DB.n && d === DB.digs[i - DB.n]) DB.stats.digMiss++; });
+    $('#play').innerHTML = playHTML(`
+      <div class="dual-wrap">
+        <div class="nb-top">
+          <span class="nb-badge" id="db-badge">N = ${DB.n}</span>
+          <span class="nb-progress" id="db-prog">0 / ${DB.trials}</span>
+        </div>
+        <div class="dual-grid" id="db-grid">
+          ${Array.from({ length: 9 }, (_, i) => '<div class="dual-cell" data-i="' + i + '"></div>').join('')}
+        </div>
+        <div class="dual-btns">
+          <button class="dual-btn pos" id="db-pos">位置匹配 <kbd>空格</kbd></button>
+          <button class="dual-btn num" id="db-num">数字匹配 <kbd>Enter</kbd></button>
+        </div>
+        <div class="dual-hint">位置与 N 步前相同 → 位置匹配；数字相同 → 数字匹配；两个都相同就都按</div>
+        <div class="dual-stats">
+          <span id="db-st-pos">位置 0/0</span><span id="db-st-dig">数字 0/0</span><span id="db-st-fa">误报 0</span>
+        </div>
+        <div class="dual-audio-note">🔊 数字通过语音播报（无声卡时用音高表示：数字越大音越高）</div>
+      </div>`);
+    $('#db-pos').addEventListener('click', () => dbPress('pos'));
+    $('#db-num').addEventListener('click', () => dbPress('dig'));
+    dbNext();
+  }
+};
+function dbNext(){
+  if (DB.idx >= DB.trials) return dbFinish();
+  const i = DB.idx;
+  DB.posMatch = (i >= DB.n && DB.pos[i] === DB.pos[i - DB.n]);
+  DB.digMatch = (i >= DB.n && DB.digs[i] === DB.digs[i - DB.n]);
+  DB.log.push({ pm: DB.posMatch, dm: DB.digMatch, pHit: false, pFA: false, dHit: false, dFA: false });
+  DB.posDone = false; DB.digDone = false;
+  const cell = document.querySelector('.dual-cell[data-i="' + DB.pos[i] + '"]');
+  cell.classList.add('lit');
+  speakDigit(DB.digs[i]);
+  DB.phase = 'on';
+  $('#db-prog').textContent = (i + 1) + ' / ' + DB.trials;
+  setT('db', () => {
+    cell.classList.remove('lit');
+    DB.phase = 'off';
+    setT('db', () => { DB.idx++; dbAdapt(); dbNext(); }, 500);
+  }, DB.onMs);
+}
+function dbPress(kind){
+  if (DB.phase !== 'on') return;
+  const cur = DB.log[DB.log.length - 1];
+  if (kind === 'pos') {
+    if (DB.posDone) return;
+    DB.posDone = true;
+    if (DB.posMatch) {
+      cur.pHit = true; DB.stats.posHits++;
+      flash('#db-pos', 'ok');
+    } else {
+      cur.pFA = true; DB.stats.posFA++;
+      flash('#db-pos', 'err');
+      beep(140, 0.25, 'sawtooth', 0.12);
+    }
+  } else {
+    if (DB.digDone) return;
+    DB.digDone = true;
+    if (DB.digMatch) {
+      cur.dHit = true; DB.stats.digHits++;
+      flash('#db-num', 'ok');
+      beep(1300, 0.1, 'square', 0.07);
+    } else {
+      cur.dFA = true; DB.stats.digFA++;
+      flash('#db-num', 'err');
+      beep(140, 0.25, 'sawtooth', 0.12);
+    }
+  }
+  dbStats();
+}
+function dbStats(){
+  $('#db-st-pos').textContent = '位置 ' + DB.stats.posHits + '/' + DB.stats.posMiss;
+  $('#db-st-dig').textContent = '数字 ' + DB.stats.digHits + '/' + DB.stats.digMiss;
+  $('#db-st-fa').textContent = '误报 ' + (DB.stats.posFA + DB.stats.digFA);
+}
+function dbAdapt(){
+  const recent = DB.log.slice(-10);
+  const m = recent.filter(t => t.pm || t.dm);
+  if (!m.length) return;
+  const hitRate = m.filter(t => (t.pm && t.pHit) || (t.dm && t.dHit)).length / m.length;
+  const nonM = recent.filter(t => !(t.pm || t.dm));
+  const faRate = nonM.length ? nonM.filter(t => t.pFA || t.dFA).length / nonM.length : 0;
+  const old = DB.n;
+  if (hitRate >= 0.8 && faRate <= 0.25 && DB.n < DB.maxN) {
+    DB.n++;
+    const b = $('#db-badge'); b.textContent = '⬆ N → ' + DB.n;
+    b.classList.add('up'); setTimeout(() => b.classList.remove('up'), 500);
+  } else if ((hitRate < 0.5 || faRate > 0.4) && DB.n > DB.minN) {
+    DB.n--;
+    const b = $('#db-badge'); b.textContent = '⬇ N → ' + DB.n;
+    b.classList.add('up'); setTimeout(() => b.classList.remove('up'), 500);
+  }
+  if (DB.n > DB.topN) DB.topN = DB.n;
+}
+function dbFinish(){
+  const st = DB.stats;
+  const fa = st.posFA + st.digFA;
+  const score = (st.posHits + st.digHits) * 10 - fa * 5 + DB.topN * 20;
+  finishGame('dual', {
+    score: score,
+    title: '双 N-Back 完成！',
+    rows: [
+      ['位置命中', st.posHits + ' / ' + st.posMiss],
+      ['数字命中', st.digHits + ' / ' + st.digMiss],
+      ['误报', fa],
+      ['最高 N', DB.topN],
+      ['得分', score]
+    ],
+    tip: '双通道同时命中 ' + DB.topN + '-back 是工作记忆的高阶形态。每天一轮，坚持两周再看变化。'
+  });
+}
+
+/* ============ 游戏 3：数字广度 ============ */
+const DS = {
+  mode: 'fwd', startLen: 3, len: 3, strikes: 0, score: 0, rounds: 0, maxLen: 2,
+  list: [], idx: 0, phase: 'idle', digitMs: 900, gapMs: 300,
+  start(){
+    const mSel = $('#ds-mode'); if (mSel) DS.mode = mSel.value;
+    const sSel = $('#ds-start'); if (sSel) DS.startLen = +sSel.value;
+    DS.len = DS.startLen; DS.strikes = 0; DS.score = 0; DS.rounds = 0; DS.maxLen = DS.startLen - 1; DS.phase = 'idle';
+    $('#play').innerHTML = playHTML(`
+      <div class="span-wrap">
+        <div class="span-info">
+          <span>当前长度 <b id="ds-len">${DS.len}</b></span>
+          <span>机会 <b id="ds-strikes"></b></span>
+          <span>得分 <b id="ds-score">0</b></span>
+        </div>
+        <div class="span-display" id="ds-display">·</div>
+        <div class="span-input-row">
+          <input id="ds-input" inputmode="numeric" autocomplete="off" placeholder="输入数字…" disabled/>
+          <button class="btn" id="ds-submit" disabled>确定</button>
+        </div>
+        <div class="span-hint" id="ds-hint">${DS.mode === 'fwd' ? '记住出现的数字' : '记住出现的数字（倒序输入）'}</div>
+      </div>`);
+    $('#ds-input').addEventListener('keydown', e => { if (e.key === 'Enter') dsSubmit(); });
+    $('#ds-submit').addEventListener('click', dsSubmit);
+    updateDsStrikes();
+    dsNewRound();
+  }
+};
+function updateDsStrikes(){
+  const el = $('#ds-strikes');
+  if (el) el.textContent = '❤️'.repeat(Math.max(0, 3 - DS.strikes)) + '🖤'.repeat(Math.max(0, DS.strikes));
+}
+function dsNewRound(){
+  DS.phase = 'show'; DS.idx = 0;
+  DS.list = [];
+  for (let k = 0; k < DS.len; k++) DS.list.push(randInt(1, 9));
+  $('#ds-len').textContent = DS.len;
+  $('#ds-input').value = '';
+  $('#ds-input').disabled = true;
+  $('#ds-submit').disabled = true;
+  $('#ds-display').textContent = '';
+  dsShowNext();
+}
+function dsShowNext(){
+  if (DS.idx >= DS.list.length) return dsInputPhase();
+  const dis = $('#ds-display');
+  dis.textContent = DS.list[DS.idx];
+  dis.className = 'span-display on';
+  beep(500 + DS.list[DS.idx] * 90, 0.1, 'sine', 0.07);
+  setT('ds-show', () => {
+    dis.textContent = '';
+    DS.idx++;
+    setT('ds-show', dsShowNext, DS.gapMs);
+  }, DS.digitMs);
+}
+function dsInputPhase(){
+  DS.phase = 'input';
+  const dis = $('#ds-display');
+  dis.textContent = '?';
+  dis.className = 'span-display';
+  const inp = $('#ds-input');
+  inp.disabled = false;
+  inp.focus();
+  $('#ds-submit').disabled = false;
+  $('#ds-hint').textContent = DS.mode === 'fwd' ? '依次输入刚才的数字，回车提交' : '从最后一个数字往前倒序输入，回车提交';
+}
+function dsSubmit(){
+  if (DS.phase !== 'input') return;
+  const v = $('#ds-input').value.trim();
+  const expected = DS.mode === 'fwd' ? DS.list.join('') : DS.list.slice().reverse().join('');
+  if (v === expected) {
+    DS.score += DS.len * 10;
+    DS.rounds++;
+    DS.maxLen = DS.len;
+    $('#ds-score').textContent = DS.score;
+    flash('#ds-display', 'correct');
+    if (DS.len >= 12) return dsFinish();
+    DS.len++;
+    $('#ds-hint').textContent = '✅ 正确！长度 +1 → ' + DS.len;
+    setT('ds-next', () => { DS.phase = 'idle'; dsNewRound(); }, 800);
+  } else {
+    DS.strikes++;
+    flash('#ds-display', 'wrong');
+    beep(140, 0.25, 'sawtooth', 0.12);
+    updateDsStrikes();
+    if (DS.strikes >= 3) return dsFinish();
+    $('#ds-hint').textContent = '❌ 错了（还剩 ' + (3 - DS.strikes) + ' 次机会），再看一遍这个长度';
+    setT('ds-next', () => { DS.phase = 'idle'; dsNewRound(); }, 900);
+  }
+}
+function dsFinish(){
+  const score = DS.score + DS.maxLen * 5;
+  const totalRounds = DS.rounds + DS.strikes;
+  finishGame('span', {
+    score: score,
+    title: '数字广度结束',
+    rows: [
+      ['最长长度', DS.maxLen + ' 位'],
+      ['答对轮次', DS.rounds + ' / ' + totalRounds],
+      ['剩余机会', Math.max(0, 3 - DS.strikes)],
+      ['得分', score]
+    ],
+    tip: '普通人顺序广度 7±2、倒序约 5-6。你能稳定倒序背到 ' + DS.maxLen + ' 位了吗？每周复测一次，看曲线往上走。'
+  });
+}
+
+/* ============ 全局事件 ============ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadS();
+  renderHome();
+  // 预加载语音列表
+  try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
+  document.addEventListener('click', ensureAudio, { once: true });
+  $('#sound-btn').addEventListener('click', () => {
+    muted = !muted;
+    $('#sound-btn').textContent = muted ? '🔇' : '🔊';
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    if ((CUR_GAME === 'nback' || CUR_GAME === 'mix') && (e.code === 'Space' || e.code === 'Enter')) {
+      e.preventDefault(); if (CUR_GAME === 'nback') nbPress(); else mxPress();
+    } else if (CUR_GAME === 'dual' && e.code === 'Space') {
+      e.preventDefault(); dbPress('pos');
+    } else if (CUR_GAME === 'dual' && e.code === 'Enter') {
+      e.preventDefault(); dbPress('dig');
+    }
+  });
+});
+</script>
+</body>
+</html>
