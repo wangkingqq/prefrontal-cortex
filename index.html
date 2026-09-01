@@ -153,12 +153,37 @@ function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
 /* ============ 本地存档 ============ */
 const STORE_KEY = 'pfc_trainer_v1';
-let S = { streak: 0, lastDate: '', totalSessions: 0, dailyCount: 0, best: {} };
+const SETTINGS_KEY = 'pfc_trainer_settings_v1';
+let S = { streak: 0, lastDate: '', totalSessions: 0, dailyCount: 0, best: {}, history: [] };
 function loadS(){
   try { const raw = localStorage.getItem(STORE_KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
+  if (!Array.isArray(S.history)) S.history = [];
 }
 function saveS(){
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+/* 用户设置：每个游戏的参数自动记忆 */
+const DEF_SETTINGS = {
+  nback: { n: 2, speed: 'normal', count: 20 },
+  dual:  { n: 1, count: 20 },
+  mix:   { n: 2, speed: 'normal', count: 20 },
+  span:  { mode: 'fwd', start: 3 },
+};
+let settings = {};
+function loadSettings(){
+  settings = JSON.parse(JSON.stringify(DEF_SETTINGS));
+  try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) {
+    const saved = JSON.parse(raw);
+    for (const k of Object.keys(DEF_SETTINGS)) {
+      if (saved[k]) settings[k] = Object.assign({}, DEF_SETTINGS[k], saved[k]);
+    }
+  }} catch (e) {}
+}
+function saveSettings(){
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+function optSel(vals, cur, label){
+  return vals.map(v => `<option value="${v}"${String(v) === String(cur) ? ' selected' : ''}>${label ? label(v) : v}</option>`).join('');
 }
 function todayStr(d){
   d = d || new Date();
@@ -178,6 +203,14 @@ function bestFor(g){ return S.best[g] || null; }
 function setBest(g, v){
   const b = bestFor(g);
   if (!b || v.score > b.score) { S.best[g] = v; saveS(); }
+}
+function addHistory(entry){
+  S.history.push(entry);
+  if (S.history.length > 100) S.history = S.history.slice(-100);
+  saveS();
+}
+function historyFor(g){
+  return S.history.filter(h => h.g === g).slice(-1)[0] || null;
 }
 
 /* ============ 音效 ============ */
@@ -252,10 +285,10 @@ const HOWTO = {
   span: '<ul><li>数字一个接一个出现，然后输入</li><li><b>顺序</b>模式：按原顺序输入；<b>倒序</b>模式：从最后一个往前输入（更难）</li><li>答对长度 +1，答错消耗一次机会，错 3 次结束</li></ul>',
 };
 const INTRO_EXTRA = {
-  nback: () => '<label>N 步数<select id="nb-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="nb-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="nb-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
-  dual: () => '<label>N 步数<select id="db-n"><option value="1" selected>1 · 推荐</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>轮数<select id="db-count"><option value="20" selected>20</option><option value="30">30</option></select></label>',
-  mix: () => '<label>N 步数<select id="mx-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="mx-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="mx-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
-  span: () => '<label>模式<select id="ds-mode"><option value="fwd" selected>顺序</option><option value="back">倒序（更难）</option></select></label><label>起始长度<select id="ds-start"><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>',
+  nback: () => { const s = settings.nback; return '<label>N 步数<select id="nb-n">' + optSel([1,2,3,4,5], s.n) + '</select></label><label>节奏<select id="nb-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label><label>轮数<select id="nb-count">' + optSel([20,30,40], s.count) + '</select></label>'; },
+  dual: () => { const s = settings.dual; return '<label>N 步数<select id="db-n">' + optSel([1,2,3,4,5], s.n) + '</select></label><label>轮数<select id="db-count">' + optSel([20,30], s.count) + '</select></label>'; },
+  mix: () => { const s = settings.mix; return '<label>N 步数<select id="mx-n">' + optSel([1,2,3,4,5], s.n) + '</select></label><label>节奏<select id="mx-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label><label>轮数<select id="mx-count">' + optSel([20,30,40], s.count) + '</select></label>'; },
+  span: () => { const s = settings.span; return '<label>模式<select id="ds-mode">' + optSel(['fwd','back'], s.mode, v => v === 'fwd' ? '顺序' : '倒序（更难）') + '</select></label><label>起始长度<select id="ds-start">' + optSel([3,4,5], s.start) + '</select></label>'; },
 };
 
 /* ============ 首页 ============ */
@@ -264,6 +297,7 @@ function renderChips(){
 }
 function renderHome(){
   const todayCount = (S.lastDate === todayStr()) ? S.dailyCount : 0;
+  const recent = S.history.slice(-8).reverse();
   $('#home').innerHTML = `
     <div class="hero card">
       <h1>🧠 工作记忆训练营</h1>
@@ -283,15 +317,29 @@ function renderHome(){
     <h2 class="sec-title">选择训练</h2>
     <div class="game-grid">
       ${Object.keys(GAME_META).map(g => {
-        const m = GAME_META[g], b = bestFor(g);
+        const m = GAME_META[g], b = bestFor(g), h = historyFor(g);
+        const last = h ? `<div class="gc-best" style="color:var(--sub)">最近 ${h.score} 分 · ${h.date.slice(5)}</div>` : '';
         return `<div class="game-card" style="--accent:${m.color}" onclick="goToIntro('${g}')">
           <div class="gc-icon">${m.icon}</div>
           <div class="gc-body"><h3>${m.name}</h3><p>${m.desc}</p>
-          <div class="gc-best">${b ? '🏆 最佳 ' + b.score + ' 分' : '尚未练习'}</div></div>
+          <div class="gc-best">${b ? '🏆 最佳 ' + b.score + ' 分' : '尚未练习'}</div>
+          ${last}</div>
           <div class="gc-go">开始 ›</div>
         </div>`;
       }).join('')}
     </div>
+    ${recent.length ? `
+    <h2 class="sec-title">📊 最近训练</h2>
+    <div class="card" style="padding:14px 18px">
+      ${recent.map(h => {
+        const m = GAME_META[h.g];
+        const det = h.n != null ? 'N=' + h.n : (h.maxLen != null ? h.maxLen + ' 位' : '');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
+          <span>${m ? m.icon + ' ' + m.name : h.g} <span class="sub">${det ? '· ' + det : ''}</span></span>
+          <span><b style="color:var(--acc)">${h.score}</b> <span class="sub">${h.date.slice(5)}</span></span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
     <div class="card tip-card">💡 <b>训练建议：</b>双 N-Back 最累、收益也最大。每天至少一轮双 N-Back + 一轮 N-Back 或数字广度；感觉疲惫就停 —— 工作记忆训练吃的是「刚刚好」，不是「拼老命」。</div>
   `;
   show('home');
@@ -337,6 +385,13 @@ function finishGame(g, data){
   const prev = bestFor(g);
   const isBest = !prev || data.score > prev.score;
   if (isBest) setBest(g, { score: data.score, when: todayStr() });
+  // 记录训练历史（含时间戳与附加信息）
+  const extra = {};
+  if (typeof NB !== 'undefined' && g === 'nback') extra.n = NB.n;
+  if (typeof DB !== 'undefined' && g === 'dual') extra.n = DB.n;
+  if (typeof MX !== 'undefined' && g === 'mix') extra.n = MX.n;
+  if (typeof DS !== 'undefined' && g === 'span') extra.maxLen = DS.maxLen;
+  addHistory({ g: g, score: data.score, when: new Date().toISOString(), date: todayStr(), ...extra });
   $('#result').innerHTML = `
     <div class="card result-card" style="--accent:${GAME_META[g].color}">
       <div class="result-icon">${GAME_META[g].icon}</div>
@@ -367,6 +422,8 @@ const NB = {
       NB.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
     }
     const cSel = $('#nb-count'); if (cSel) NB.trials = +cSel.value;
+    settings.nback = { n: NB.n, speed: spd ? spd.value : 'normal', count: NB.trials };
+    saveSettings();
     NB.seq = []; NB.log = []; NB.idx = 0; NB.phase = 'idle';
     for (let i = 0; i < NB.trials; i++){
       let d;
@@ -461,6 +518,8 @@ const MX = {
       MX.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
     }
     const cSel = $('#mx-count'); if (cSel) MX.trials = +cSel.value;
+    settings.mix = { n: MX.n, speed: spd ? spd.value : 'normal', count: MX.trials };
+    saveSettings();
     MX.seq = []; MX.mods = []; MX.log = []; MX.idx = 0; MX.phase = 'idle';
     for (let i = 0; i < MX.trials; i++){
       let d;
@@ -559,6 +618,8 @@ const DB = {
   start(){
     const nSel = $('#db-n'); if (nSel) DB.n = +nSel.value;
     const cSel = $('#db-count'); if (cSel) DB.trials = +cSel.value;
+    settings.dual = { n: DB.n, count: DB.trials };
+    saveSettings();
     DB.pos = []; DB.digs = []; DB.log = []; DB.idx = 0; DB.phase = 'idle';
     for (let i = 0; i < DB.trials; i++){
       let p, d;
@@ -670,6 +731,8 @@ const DS = {
   start(){
     const mSel = $('#ds-mode'); if (mSel) DS.mode = mSel.value;
     const sSel = $('#ds-start'); if (sSel) DS.startLen = +sSel.value;
+    settings.span = { mode: DS.mode, start: DS.startLen };
+    saveSettings();
     DS.len = DS.startLen; DS.strikes = 0; DS.score = 0; DS.rounds = 0; DS.maxLen = DS.startLen - 1; DS.phase = 'idle';
     $('#play').innerHTML = playHTML(`
       <div class="span-wrap">
@@ -772,6 +835,7 @@ function dsFinish(){
 /* ============ 全局事件 ============ */
 document.addEventListener('DOMContentLoaded', () => {
   loadS();
+  loadSettings();
   renderHome();
   // 预加载语音列表
   try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
