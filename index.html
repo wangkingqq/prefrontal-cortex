@@ -240,21 +240,21 @@ let CUR_GAME = null;
 
 /* ============ 游戏元数据 ============ */
 const GAME_META = {
-  nback: { name: 'N-Back 自适应', icon: '🔢', desc: '数字流中找「N 步前」，难度随表现自动升降', color: '#22d3ee' },
+  nback: { name: 'N-Back', icon: '🔢', desc: '数字流中找「N 步前」，N 由你设定、整局不变', color: '#22d3ee' },
   dual:  { name: '双 N-Back',    icon: '🧩', desc: '位置 + 声音双通道同时记，工作记忆的进阶地狱', color: '#a78bfa' },
   mix:   { name: '模态切换 N-Back', icon: '🎭', desc: '数字在视觉/听觉间随机切换，双通道无差别记忆', color: '#f472b6' },
   span:  { name: '数字广度',     icon: '🔗', desc: '经典跨度测验：顺序/倒序背数字，逐级加压',   color: '#34d399' },
 };
 const HOWTO = {
-  nback: '<ul><li>屏幕上依次出现数字 0–9，当<b>当前数字</b>等于 <b>N 步前</b>的数字时，按「匹配」或 <kbd>空格</kbd></li><li>系统每 10 题评估一次：命中率高就<b>自动升 N</b>，错得多就降 —— 永远把你压在刚好够得着的难度</li><li>N 最高可到 5，节奏可选「快」—— 两者叠加才是完全体</li></ul>',
+  nback: '<ul><li>屏幕上依次出现数字 0–9，当<b>当前数字</b>等于 <b>N 步前</b>的数字时，按「匹配」或 <kbd>空格</kbd></li><li>开赛前选好 N（1–5），<b>整局固定不变</b> —— 练的就是把当前 N 稳稳吃下</li><li>节奏可选「快」—— N 与节奏叠加才是完全体</li></ul>',
   dual: '<ul><li>每轮：3×3 方格亮一个位置，同时<b>听到一个数字</b></li><li>位置与 N 步前相同 → 按「位置匹配」（<kbd>空格</kbd>）；数字相同 → 按「数字匹配」（<kbd>Enter</kbd>）</li><li>两个都相同就两个都按 —— 视觉 + 听觉双通道同时工作，这就是 Jaeggi 研究的双 N-Back</li><li>建议从 N=1 开始，它比单通道难得多；数字用语音报出，无语音时用音高表示</li></ul>',
   mix: '<ul><li>每个数字随机以<b>显示</b>（屏幕）或<b>播报</b>（🔊 声音）出现，两种各占约一半</li><li>不管哪种通道，只要<b>当前数字</b>等于 <b>N 步前</b>的数字就按「匹配」</li><li>听过的要记得住，看过的也要记得住 —— 双通道记忆 + 模态切换，比纯视觉 N-Back 更难</li></ul>',
   span: '<ul><li>数字一个接一个出现，然后输入</li><li><b>顺序</b>模式：按原顺序输入；<b>倒序</b>模式：从最后一个往前输入（更难）</li><li>答对长度 +1，答错消耗一次机会，错 3 次结束</li></ul>',
 };
 const INTRO_EXTRA = {
-  nback: () => '<label>起始 N<select id="nb-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="nb-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="nb-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
-  dual: () => '<label>起始 N<select id="db-n"><option value="1" selected>1 · 推荐</option><option value="2">2</option><option value="3">3</option></select></label><label>轮数<select id="db-count"><option value="20" selected>20</option><option value="30">30</option></select></label>',
-  mix: () => '<label>起始 N<select id="mx-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="mx-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="mx-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
+  nback: () => '<label>N 步数<select id="nb-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="nb-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="nb-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
+  dual: () => '<label>N 步数<select id="db-n"><option value="1" selected>1 · 推荐</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>轮数<select id="db-count"><option value="20" selected>20</option><option value="30">30</option></select></label>',
+  mix: () => '<label>N 步数<select id="mx-n"><option value="1">1</option><option value="2" selected>2 · 推荐</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label><label>节奏<select id="mx-speed"><option value="slow">慢 · 1.5s</option><option value="normal" selected>标准 · 1s</option><option value="fast">快 · 0.7s</option></select></label><label>轮数<select id="mx-count"><option value="20" selected>20</option><option value="30">30</option><option value="40">40</option></select></label>',
   span: () => '<label>模式<select id="ds-mode"><option value="fwd" selected>顺序</option><option value="back">倒序（更难）</option></select></label><label>起始长度<select id="ds-start"><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>',
 };
 
@@ -267,7 +267,7 @@ function renderHome(){
   $('#home').innerHTML = `
     <div class="hero card">
       <h1>🧠 工作记忆训练营</h1>
-      <p class="sub">只练一件事：工作记忆 —— 每天 10–15 分钟，难度自动升级</p>
+      <p class="sub">只练一件事：工作记忆 —— 每天 10–15 分钟，难度由你掌控</p>
       <div class="hero-chips">
         <span class="chip">🔥 连续 ${S.streak} 天</span>
         <span class="chip">📅 今日训练 ${todayCount} 次</span>
@@ -277,7 +277,7 @@ function renderHome(){
     <div class="card science">
       <h3>🧬 为什么只练工作记忆？</h3>
       <p>健忘、走神、说忘就忘 —— 这些大多指向同一个核心能力：<b>工作记忆</b>（大脑的「便签纸」，同时记住并处理几件事的能力）。它由前额叶皮层支撑，且像肌肉一样可训练。</p>
-      <p>四个游戏全部瞄准它：<b>N-Back</b>（数字流）、<b>双 N-Back</b>（视觉+听觉双通道，公认最强的训练范式）、<b>模态切换 N-Back</b>（视听随机切换）、<b>数字广度</b>（经典跨度测验）。难度自适应：大脑必须待在「刚好够得着」的挑战区，进步才持续。</p>
+      <p>四个游戏全部瞄准它：<b>N-Back</b>（数字流）、<b>双 N-Back</b>（视觉+听觉双通道，公认最强的训练范式）、<b>模态切换 N-Back</b>（视听随机切换）、<b>数字广度</b>（经典跨度测验）。N-Back 系列难度由你定（N 整局固定），数字广度逐级加压 —— 挑战区自己选。</p>
       <p class="sub">有效训练的感觉是：<b>有点吃力，但不至于崩溃</b>。如果觉得轻松，说明难度该升了。</p>
     </div>
     <h2 class="sec-title">选择训练</h2>
@@ -354,10 +354,10 @@ function finishGame(g, data){
   renderChips();
 }
 
-/* ============ 游戏 1：N-Back 自适应 ============ */
+/* ============ 游戏 1：N-Back ============ */
 const NB = {
   n: 2, trials: 20, onMs: 1000, offMs: 600, minN: 1, maxN: 5,
-  seq: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false, topN: 2,
+  seq: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false,
   start(){
     const nSel = $('#nb-n'); if (nSel) NB.n = +nSel.value;
     const spd = $('#nb-speed');
@@ -367,7 +367,7 @@ const NB = {
       NB.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
     }
     const cSel = $('#nb-count'); if (cSel) NB.trials = +cSel.value;
-    NB.seq = []; NB.log = []; NB.idx = 0; NB.phase = 'idle'; NB.topN = NB.n;
+    NB.seq = []; NB.log = []; NB.idx = 0; NB.phase = 'idle';
     for (let i = 0; i < NB.trials; i++){
       let d;
       if (i >= NB.n && Math.random() < 0.3) d = NB.seq[i - NB.n];
@@ -406,7 +406,7 @@ function nbNext(){
     dis.textContent = '·';
     dis.classList.remove('on');
     NB.phase = 'off';
-    setT('nb', () => { NB.idx++; nbAdapt(); nbNext(); }, NB.offMs);
+    setT('nb', () => { NB.idx++; nbNext(); }, NB.offMs);
   }, NB.onMs);
 }
 function nbPress(){
@@ -429,33 +429,10 @@ function nbStats(){
   $('#nb-st-fa').textContent = '误报 ' + NB.stats.fa;
   $('#nb-st-miss').textContent = '漏报 ' + Math.max(0, NB.stats.matches - NB.stats.hits);
 }
-function nbAdapt(){
-  const recent = NB.log.slice(-10);
-  const m = recent.filter(t => t.isMatch);
-  if (!m.length) return;
-  const hitRate = m.filter(t => t.hit).length / m.length;
-  const nonM = recent.filter(t => !t.isMatch);
-  const faRate = nonM.length ? nonM.filter(t => t.fa).length / nonM.length : 0;
-  const old = NB.n;
-  if (hitRate >= 0.85 && faRate <= 0.2 && NB.n < NB.maxN) {
-    NB.n++;
-    badgeUp('⬆ N → ' + NB.n);
-  } else if ((hitRate < 0.55 || faRate > 0.35) && NB.n > NB.minN) {
-    NB.n--;
-    badgeUp('⬇ N → ' + NB.n);
-  }
-  if (NB.n > NB.topN) NB.topN = NB.n;
-  if (NB.n !== old) {
-    const b = $('#nb-badge');
-    b.classList.add('up');
-    setTimeout(() => b.classList.remove('up'), 500);
-  }
-}
-function badgeUp(txt){ const b = $('#nb-badge'); if (b) b.textContent = txt; }
 function nbFinish(){
   const st = NB.stats;
   st.misses = st.matches - st.hits;
-  const score = st.hits * (5 + NB.topN * 2) - st.fa * 5 + NB.topN * 20;
+  const score = st.hits * (5 + NB.n * 2) - st.fa * 5 + NB.n * 20;
   finishGame('nback', {
     score: score,
     title: 'N-Back 完成！',
@@ -464,17 +441,17 @@ function nbFinish(){
       ['漏报', st.misses],
       ['误报', st.fa],
       ['命中率', st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
-      ['最高 N', NB.topN],
+      ['N 步数', NB.n],
       ['得分', score]
     ],
-    tip: '命中了 ' + NB.topN + '-back 意味着工作记忆又厚了一层。下次直接从 N=' + NB.topN + ' 起步，向更高处冲。'
+    tip: '整局固定 ' + NB.n + '-back 稳定发挥就是进步。想加码？下次开赛把 N 调高一档。'
   });
 }
 
 /* ============ 游戏 1.5：模态切换 N-Back（视听随机） ============ */
 const MX = {
   n: 2, trials: 20, onMs: 1000, offMs: 600, minN: 1, maxN: 5,
-  seq: [], mods: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false, topN: 2,
+  seq: [], mods: [], log: [], idx: 0, phase: 'idle', stats: null, curMatch: false,
   start(){
     const nSel = $('#mx-n'); if (nSel) MX.n = +nSel.value;
     const spd = $('#mx-speed');
@@ -484,7 +461,7 @@ const MX = {
       MX.offMs = v === 'slow' ? 900 : v === 'fast' ? 400 : 600;
     }
     const cSel = $('#mx-count'); if (cSel) MX.trials = +cSel.value;
-    MX.seq = []; MX.mods = []; MX.log = []; MX.idx = 0; MX.phase = 'idle'; MX.topN = MX.n;
+    MX.seq = []; MX.mods = []; MX.log = []; MX.idx = 0; MX.phase = 'idle';
     for (let i = 0; i < MX.trials; i++){
       let d;
       if (i >= MX.n && Math.random() < 0.3) d = MX.seq[i - MX.n];
@@ -532,7 +509,7 @@ function mxNext(){
     dis.textContent = '·';
     dis.classList.remove('on');
     MX.phase = 'off';
-    setT('mx', () => { MX.idx++; mxAdapt(); mxNext(); }, MX.offMs);
+    setT('mx', () => { MX.idx++; mxNext(); }, MX.offMs);
   }, MX.onMs);
 }
 function mxPress(){
@@ -555,33 +532,10 @@ function mxStats(){
   $('#mx-st-fa').textContent = '误报 ' + MX.stats.fa;
   $('#mx-st-miss').textContent = '漏报 ' + Math.max(0, MX.stats.matches - MX.stats.hits);
 }
-function mxAdapt(){
-  const recent = MX.log.slice(-10);
-  const m = recent.filter(t => t.isMatch);
-  if (!m.length) return;
-  const hitRate = m.filter(t => t.hit).length / m.length;
-  const nonM = recent.filter(t => !t.isMatch);
-  const faRate = nonM.length ? nonM.filter(t => t.fa).length / nonM.length : 0;
-  const old = MX.n;
-  if (hitRate >= 0.85 && faRate <= 0.2 && MX.n < MX.maxN) {
-    MX.n++;
-    badgeUpMx('⬆ N → ' + MX.n);
-  } else if ((hitRate < 0.55 || faRate > 0.35) && MX.n > MX.minN) {
-    MX.n--;
-    badgeUpMx('⬇ N → ' + MX.n);
-  }
-  if (MX.n > MX.topN) MX.topN = MX.n;
-  if (MX.n !== old) {
-    const b = $('#mx-badge');
-    b.classList.add('up');
-    setTimeout(() => b.classList.remove('up'), 500);
-  }
-}
-function badgeUpMx(txt){ const b = $('#mx-badge'); if (b) b.textContent = txt; }
 function mxFinish(){
   const st = MX.stats;
   st.misses = st.matches - st.hits;
-  const score = st.hits * (5 + MX.topN * 2) - st.fa * 5 + MX.topN * 20;
+  const score = st.hits * (5 + MX.n * 2) - st.fa * 5 + MX.n * 20;
   finishGame('mix', {
     score: score,
     title: '模态切换 N-Back 完成！',
@@ -590,7 +544,7 @@ function mxFinish(){
       ['漏报', st.misses],
       ['误报', st.fa],
       ['命中率', st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
-      ['最高 N', MX.topN],
+      ['N 步数', MX.n],
       ['得分', score]
     ],
     tip: '视觉和听觉来回切换，逼大脑把两种通道的数字存进同一条记忆线。这是 N-Back 家族里最需要「分心也能记住」的版本。'
@@ -600,12 +554,12 @@ function mxFinish(){
 const DB = {
   n: 1, trials: 20, onMs: 1500, minN: 1, maxN: 3,
   pos: [], digs: [], log: [], idx: 0, phase: 'idle',
-  stats: null, topN: 1, posMatch: false, digMatch: false,
+  stats: null, posMatch: false, digMatch: false,
   posDone: false, digDone: false,
   start(){
     const nSel = $('#db-n'); if (nSel) DB.n = +nSel.value;
     const cSel = $('#db-count'); if (cSel) DB.trials = +cSel.value;
-    DB.pos = []; DB.digs = []; DB.log = []; DB.idx = 0; DB.phase = 'idle'; DB.topN = DB.n;
+    DB.pos = []; DB.digs = []; DB.log = []; DB.idx = 0; DB.phase = 'idle';
     for (let i = 0; i < DB.trials; i++){
       let p, d;
       if (i >= DB.n && Math.random() < 0.25) p = DB.pos[i - DB.n]; else p = randInt(0, 8);
@@ -654,7 +608,7 @@ function dbNext(){
   setT('db', () => {
     cell.classList.remove('lit');
     DB.phase = 'off';
-    setT('db', () => { DB.idx++; dbAdapt(); dbNext(); }, 500);
+    setT('db', () => { DB.idx++; dbNext(); }, 500);
   }, DB.onMs);
 }
 function dbPress(kind){
@@ -691,29 +645,10 @@ function dbStats(){
   $('#db-st-dig').textContent = '数字 ' + DB.stats.digHits + '/' + DB.stats.digMiss;
   $('#db-st-fa').textContent = '误报 ' + (DB.stats.posFA + DB.stats.digFA);
 }
-function dbAdapt(){
-  const recent = DB.log.slice(-10);
-  const m = recent.filter(t => t.pm || t.dm);
-  if (!m.length) return;
-  const hitRate = m.filter(t => (t.pm && t.pHit) || (t.dm && t.dHit)).length / m.length;
-  const nonM = recent.filter(t => !(t.pm || t.dm));
-  const faRate = nonM.length ? nonM.filter(t => t.pFA || t.dFA).length / nonM.length : 0;
-  const old = DB.n;
-  if (hitRate >= 0.8 && faRate <= 0.25 && DB.n < DB.maxN) {
-    DB.n++;
-    const b = $('#db-badge'); b.textContent = '⬆ N → ' + DB.n;
-    b.classList.add('up'); setTimeout(() => b.classList.remove('up'), 500);
-  } else if ((hitRate < 0.5 || faRate > 0.4) && DB.n > DB.minN) {
-    DB.n--;
-    const b = $('#db-badge'); b.textContent = '⬇ N → ' + DB.n;
-    b.classList.add('up'); setTimeout(() => b.classList.remove('up'), 500);
-  }
-  if (DB.n > DB.topN) DB.topN = DB.n;
-}
 function dbFinish(){
   const st = DB.stats;
   const fa = st.posFA + st.digFA;
-  const score = (st.posHits + st.digHits) * 10 - fa * 5 + DB.topN * 20;
+  const score = (st.posHits + st.digHits) * 10 - fa * 5 + DB.n * 20;
   finishGame('dual', {
     score: score,
     title: '双 N-Back 完成！',
@@ -721,10 +656,10 @@ function dbFinish(){
       ['位置命中', st.posHits + ' / ' + st.posMiss],
       ['数字命中', st.digHits + ' / ' + st.digMiss],
       ['误报', fa],
-      ['最高 N', DB.topN],
+      ['N 步数', DB.n],
       ['得分', score]
     ],
-    tip: '双通道同时命中 ' + DB.topN + '-back 是工作记忆的高阶形态。每天一轮，坚持两周再看变化。'
+    tip: '双通道同时命中 ' + DB.n + '-back 是工作记忆的高阶形态。每天一轮，坚持两周再看变化。'
   });
 }
 
