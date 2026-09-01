@@ -104,10 +104,11 @@ kbd{background:#0f172a;border:1px solid var(--line);border-bottom-width:2px;bord
 .dual-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:12px auto}
 .dual-cell{aspect-ratio:1;background:rgba(255,255,255,.05);border:2px solid var(--line);border-radius:14px;opacity:.35;transition:all .12s}
 .dual-cell.lit{opacity:1;background:rgba(34,211,238,.25);border-color:var(--acc);box-shadow:0 0 22px rgba(34,211,238,.5)}
-.dual-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;margin:12px auto}
-.dual-btn{padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:2px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);transition:transform .1s, background .15s}
+.dual-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;max-width:560px;margin:12px auto}
+.dual-btn{padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);transition:transform .1s, background .15s}
 .dual-btn.pos{border-color:rgba(34,211,238,.5);color:var(--acc)}
 .dual-btn.num{border-color:rgba(167,139,250,.5);color:var(--purple)}
+.dual-btn.both{border-color:rgba(52,211,153,.5);color:var(--ok)}
 .dual-btn:active{transform:scale(.96)}
 .dual-btn.ok{background:rgba(52,211,153,.2);border-color:var(--ok)}
 .dual-btn.err{background:rgba(248,113,113,.2);border-color:var(--bad);animation:shake .3s}
@@ -723,7 +724,7 @@ const DB = {
       if (i >= DB.n && Math.random() < 0.25) d = DB.digs[i - DB.n]; else { do { d = pick(DB.pool); } while (i >= DB.n && d === DB.digs[i - DB.n]); }
       DB.pos.push(p); DB.digs.push(d);
     }
-    DB.stats = { posHits: 0, posMiss: 0, posFA: 0, digHits: 0, digMiss: 0, digFA: 0 };
+    DB.stats = { posHits: 0, posMiss: 0, posFA: 0, digHits: 0, digMiss: 0, digFA: 0, bothHits: 0, bothFA: 0 };
     DB.pos.forEach((p, i) => { if (i >= DB.n && p === DB.pos[i - DB.n]) DB.stats.posMiss++; });
     DB.digs.forEach((d, i) => { if (i >= DB.n && d === DB.digs[i - DB.n]) DB.stats.digMiss++; });
     $('#play').innerHTML = playHTML(`
@@ -736,16 +737,18 @@ const DB = {
           ${Array.from({ length: 9 }, (_, i) => '<div class="dual-cell" data-i="' + i + '"></div>').join('')}
         </div>
         <div class="dual-btns">
-          <button class="dual-btn pos" id="db-pos">位置匹配 <kbd>空格</kbd></button>
-          <button class="dual-btn num" id="db-num">${settings.dual.stim === 'letter' ? '字母匹配' : '数字匹配'} <kbd>Enter</kbd></button>
+          <button class="dual-btn pos" id="db-pos">位置 <kbd>空格</kbd></button>
+          <button class="dual-btn both" id="db-both">同时匹配 <kbd>B</kbd></button>
+          <button class="dual-btn num" id="db-num">${settings.dual.stim === 'letter' ? '字母' : '数字'} <kbd>Enter</kbd></button>
         </div>
-        <div class="dual-hint">位置与 N 步前相同 → 位置匹配；刺激相同 → ${settings.dual.stim === 'letter' ? '字母匹配' : '数字匹配'}；两个都相同就都按</div>
+        <div class="dual-hint">位置与 N 步前相同 → 位置；刺激相同 → ${settings.dual.stim === 'letter' ? '字母' : '数字'}；<b>两个都相同 → 同时匹配</b>（一次得双通道分）</div>
         <div class="dual-stats">
-          <span id="db-st-pos">位置 0/0</span><span id="db-st-dig">${settings.dual.stim === 'letter' ? '字母' : '数字'} 0/0</span><span id="db-st-fa">误报 0</span>
+          <span id="db-st-pos">位置 0/0</span><span id="db-st-dig">${settings.dual.stim === 'letter' ? '字母' : '数字'} 0/0</span><span id="db-st-both">同时 0/0</span><span id="db-st-fa">误报 0</span>
         </div>
         <div class="dual-audio-note">🔊 刺激通过语音播报（无声卡时用音高表示）</div>
       </div>`);
     $('#db-pos').addEventListener('click', () => dbPress('pos'));
+    $('#db-both').addEventListener('click', () => dbPress('both'));
     $('#db-num').addEventListener('click', () => dbPress('dig'));
     dbNext();
   }
@@ -755,8 +758,9 @@ function dbNext(){
   const i = DB.idx;
   DB.posMatch = (i >= DB.n && DB.pos[i] === DB.pos[i - DB.n]);
   DB.digMatch = (i >= DB.n && DB.digs[i] === DB.digs[i - DB.n]);
-  DB.log.push({ pm: DB.posMatch, dm: DB.digMatch, pHit: false, pFA: false, dHit: false, dFA: false });
-  DB.posDone = false; DB.digDone = false;
+  DB.bothMatch = DB.posMatch && DB.digMatch;
+  DB.log.push({ pm: DB.posMatch, dm: DB.digMatch, bm: DB.bothMatch, pHit: false, pFA: false, dHit: false, dFA: false, bHit: false, bFA: false });
+  DB.posDone = false; DB.digDone = false; DB.bothDone = false;
   const cell = document.querySelector('.dual-cell[data-i="' + DB.pos[i] + '"]');
   cell.classList.add('lit');
   if (settings.dual.stim === 'num') speakDigit(DB.digs[i]); else speakStim(DB.digs[i]);
@@ -771,19 +775,35 @@ function dbNext(){
 function dbPress(kind){
   if (DB.phase !== 'on') return;
   const cur = DB.log[DB.log.length - 1];
-  if (kind === 'pos') {
-    if (DB.posDone) return;
+  if (kind === 'both') {
+    if (DB.bothDone || DB.posDone || DB.digDone) return;
+    DB.bothDone = true;
+    if (DB.bothMatch) {
+      // 双通道同时命中：位置+刺激各记一次命中，另加同时命中
+      cur.bHit = true; DB.stats.bothHits++;
+      cur.pHit = true; DB.stats.posHits++;
+      cur.dHit = true; DB.stats.digHits++;
+      flash('#db-both', 'ok');
+      beep(1500, 0.15, 'square', 0.09);
+    } else {
+      cur.bFA = true; DB.stats.bothFA++;
+      flash('#db-both', 'err');
+      beep(140, 0.25, 'sawtooth', 0.12);
+    }
+  } else if (kind === 'pos') {
+    if (DB.posDone || (DB.bothMatch && !DB.bothDone)) return;
     DB.posDone = true;
     if (DB.posMatch) {
       cur.pHit = true; DB.stats.posHits++;
       flash('#db-pos', 'ok');
+      beep(900, 0.1, 'square', 0.07);
     } else {
       cur.pFA = true; DB.stats.posFA++;
       flash('#db-pos', 'err');
       beep(140, 0.25, 'sawtooth', 0.12);
     }
   } else {
-    if (DB.digDone) return;
+    if (DB.digDone || (DB.bothMatch && !DB.bothDone)) return;
     DB.digDone = true;
     if (DB.digMatch) {
       cur.dHit = true; DB.stats.digHits++;
@@ -799,13 +819,14 @@ function dbPress(kind){
 }
 function dbStats(){
   $('#db-st-pos').textContent = '位置 ' + DB.stats.posHits + '/' + DB.stats.posMiss;
-  $('#db-st-dig').textContent = '数字 ' + DB.stats.digHits + '/' + DB.stats.digMiss;
-  $('#db-st-fa').textContent = '误报 ' + (DB.stats.posFA + DB.stats.digFA);
+  $('#db-st-dig').textContent = (settings.dual.stim === 'letter' ? '字母 ' : '数字 ') + DB.stats.digHits + '/' + DB.stats.digMiss;
+  $('#db-st-both').textContent = '同时 ' + DB.stats.bothHits + '/' + (DB.log.filter(l => l.bm).length);
+  $('#db-st-fa').textContent = '误报 ' + (DB.stats.posFA + DB.stats.digFA + DB.stats.bothFA);
 }
 function dbFinish(){
   const st = DB.stats;
-  const fa = st.posFA + st.digFA;
-  const score = (st.posHits + st.digHits) * 10 - fa * 5 + DB.n * 20;
+  const fa = st.posFA + st.digFA + st.bothFA;
+  const score = (st.posHits + st.digHits) * 10 + st.bothHits * 15 - fa * 5 + DB.n * 20;
   let levelNote = '';
   if (settings.dual.mode === 'adaptive') {
     const totalMatch = st.posMiss + st.digMiss;
@@ -823,13 +844,14 @@ function dbFinish(){
     rows: [
       ['位置命中', st.posHits + ' / ' + st.posMiss],
       [settings.dual.stim === 'letter' ? '字母命中' : '数字命中', st.digHits + ' / ' + st.digMiss],
+      ['同时命中', st.bothHits + ' / ' + DB.log.filter(l => l.bm).length],
       ['误报', fa],
       ['N 步数', DB.n],
       ['得分', score]
     ],
     tip: levelNote || (settings.dual.mode === 'adaptive'
       ? '自适应模式：综合命中率 80% 以上下一局自动升档，50% 以下降档。'
-      : '双通道同时命中 ' + DB.n + '-back 是工作记忆的高阶形态。每天一轮，坚持两周再看变化。')
+      : '双通道同时命中是最高阶反应 —— 「同时匹配」一次拿下双通道分。每天一轮，坚持两周再看变化。')
   });
 }
 
@@ -978,6 +1000,8 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); dbPress('pos');
     } else if (CUR_GAME === 'dual' && e.code === 'Enter') {
       e.preventDefault(); dbPress('dig');
+    } else if (CUR_GAME === 'dual' && (e.code === 'KeyB' || e.code === 'KeyK')) {
+      e.preventDefault(); dbPress('both');
     }
   });
 });
