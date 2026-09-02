@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="color-scheme" content="dark"/>
-<title>工作记忆训练营 WM Gym</title>
+<title>工作记忆训练营 · WM Gym</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E"/>
 <style>
 :root{
@@ -132,8 +132,9 @@ kbd{background:#0f172a;border:1px solid var(--line);border-bottom-width:2px;bord
 </head>
 <body>
 <header>
-  <div class="logo">🧠 工作记忆训练营</div>
+  <div class="logo" id="logo-el">🧠 <span class="logo-zh">工作记忆训练营</span></div>
   <div class="hright">
+    <button id="lang-btn" class="chip" title="切换语言">EN</button>
     <span id="streak-chip" class="chip">🔥 连续 0 天</span>
     <button id="sound-btn" class="chip" title="声音开关">🔊</button>
   </div>
@@ -147,6 +148,32 @@ kbd{background:#0f172a;border:1px solid var(--line);border-bottom-width:2px;bord
 <script>
 'use strict';
 
+/* ============ 国际化 ============ */
+const LANG_KEY = 'pfc_trainer_lang';
+let LANG = 'zh';
+function loadLang(){
+  try { const v = localStorage.getItem(LANG_KEY); if (v === 'en' || v === 'zh') LANG = v; } catch (e) {}
+  document.documentElement.lang = LANG;
+  const btn = $('#lang-btn'); if (btn) btn.textContent = LANG === 'zh' ? 'EN' : '中文';
+  const logo = document.querySelector('.logo-zh');
+  if (logo) logo.textContent = LANG === 'zh' ? '工作记忆训练营' : 'Working Memory Gym';
+}
+function saveLang(){
+  try { localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
+}
+function toggleLang(){
+  LANG = LANG === 'zh' ? 'en' : 'zh';
+  saveLang();
+  document.documentElement.lang = LANG;
+  const btn = $('#lang-btn'); if (btn) btn.textContent = LANG === 'zh' ? 'EN' : '中文';
+  const logo = document.querySelector('.logo-zh');
+  if (logo) logo.textContent = LANG === 'zh' ? '工作记忆训练营' : 'Working Memory Gym';
+  if (CUR_GAME) { startGame(CUR_GAME); }
+  else if (document.getElementById('result').classList.contains('active')) { renderHome(); }
+  else { renderHome(); }
+}
+/* 双语：_(中文, English) */
+function _(zh, en){ return LANG === 'en' ? en : zh; }
 /* ============ 工具 ============ */
 const $ = (s) => document.querySelector(s);
 function randInt(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -290,119 +317,135 @@ function flash(sel, cls){
   setTimeout(() => e.classList.remove(cls), 300);
 }
 function playHTML(inner){
-  return '<div class="play-top"><button class="quit" title="退出训练" onclick="quitGame()">✕</button></div>' + inner;
+  return '<div class="play-top"><button class="quit" title="' + _('退出训练','Quit') + '" onclick="quitGame()">✕</button></div>' + inner;
 }
 
 let CUR_GAME = null;
 
 /* ============ 游戏元数据 ============ */
 const GAME_META = {
-  nback: { name: 'N-Back', icon: '🔢', desc: '数字流中找「N 步前」，N 由你设定、整局不变', color: '#22d3ee' },
-  dual:  { name: '双 N-Back',    icon: '🧩', desc: '位置 + 声音双通道同时记，工作记忆的进阶地狱', color: '#a78bfa' },
-  mix:   { name: '模态切换 N-Back', icon: '🎭', desc: '数字在视觉/听觉间随机切换，双通道无差别记忆', color: '#f472b6' },
-  span:  { name: '数字广度',     icon: '🔗', desc: '经典跨度测验：顺序/倒序背数字，逐级加压',   color: '#34d399' },
+  nback: { name: 'N-Back', icon: '🔢', color: '#22d3ee', desc: { zh: '数字流中找「N 步前」，N 由你设定、整局不变', en: 'Spot "N steps back" in a stream. N is set by you, fixed per round' } },
+  dual:  { name: 'Dual N-Back', icon: '🧩', color: '#a78bfa', desc: { zh: '位置 + 声音双通道同时记，工作记忆的进阶地狱', en: 'Track position AND sound at once — the hardcore upgrade' } },
+  mix:   { name: 'Modal N-Back', icon: '🎭', color: '#f472b6', desc: { zh: '数字在视觉/听觉间随机切换，双通道无差别记忆', en: 'Stimuli flip between visual & audio randomly' } },
+  span:  { name: 'Digit Span', icon: '🔗', color: '#34d399', desc: { zh: '经典跨度测验：顺序/倒序背数字，逐级加压', en: 'Classic span test: recall digits fwd/back, level by level' } },
 };
 const HOWTO = {
-  nback: '<ul><li>屏幕上依次出现数字 0–9，当<b>当前数字</b>等于 <b>N 步前</b>的数字时，按「匹配」或 <kbd>空格</kbd></li><li>开赛前选好 N（1–5），<b>整局固定不变</b> —— 练的就是把当前 N 稳稳吃下</li><li>节奏可选「快」—— N 与节奏叠加才是完全体</li></ul>',
-  dual: '<ul><li>每轮：3×3 方格亮一个位置，同时<b>听到一个数字</b></li><li>位置与 N 步前相同 → 按「位置匹配」（<kbd>空格</kbd>）；数字相同 → 按「数字匹配」（<kbd>Enter</kbd>）</li><li>两个都相同就两个都按 —— 视觉 + 听觉双通道同时工作，这就是 Jaeggi 研究的双 N-Back</li><li>建议从 N=1 开始，它比单通道难得多；数字用语音报出，无语音时用音高表示</li></ul>',
-  mix: '<ul><li>每个数字随机以<b>显示</b>（屏幕）或<b>播报</b>（🔊 声音）出现，两种各占约一半</li><li>不管哪种通道，只要<b>当前数字</b>等于 <b>N 步前</b>的数字就按「匹配」</li><li>听过的要记得住，看过的也要记得住 —— 双通道记忆 + 模态切换，比纯视觉 N-Back 更难</li></ul>',
-  span: '<ul><li>数字一个接一个出现，然后输入</li><li><b>顺序</b>模式：按原顺序输入；<b>倒序</b>模式：从最后一个往前输入（更难）</li><li>答对长度 +1，答错消耗一次机会，错 3 次结束</li></ul>',
+  nback: {
+    zh: '<ul><li>屏幕上依次出现数字 0–9，当<b>当前数字</b>等于 <b>N 步前</b>的数字时，按「匹配」或 <kbd>空格</kbd></li><li>开赛前选好 N（1–5），<b>整局固定不变</b> —— 练的就是把当前 N 稳稳吃下</li><li>节奏可选「快」—— N 与节奏叠加才是完全体</li></ul>',
+    en: '<ul><li>A stimulus appears each step; press "Match" (<kbd>Space</kbd>) when it equals the one <b>N steps back</b></li><li>Pick N (1–5) before starting — <b>fixed for the whole round</b></li><li>Try the "fast" pace — N + speed is the full challenge</li></ul>',
+  },
+  dual: {
+    zh: '<ul><li>每轮：3×3 方格亮一个位置，同时<b>听到一个刺激</b></li><li>位置与 N 步前相同 → 按「位置」（<kbd>空格</kbd>）；刺激相同 → 按对应按钮（<kbd>Enter</kbd>）</li><li><b>两个都相同 → 按「同时匹配」</b>（<kbd>B</kbd>），一次拿下双通道分</li><li>建议从 N=1 开始；刺激用语音报出，无语音时用音高表示</li></ul>',
+    en: '<ul><li>Each round: one of 9 squares lights up while you <b>hear a stimulus</b></li><li>Same position as N back → press Position (<kbd>Space</kbd>); same stimulus → press its button (<kbd>Enter</kbd>)</li><li><b>Both same → press BOTH</b> (<kbd>B</kbd>) for double credit</li><li>Start at N=1; stimuli are spoken, pitch used when no TTS</li></ul>',
+  },
+  mix: {
+    zh: '<ul><li>每个刺激随机以<b>显示</b>（屏幕）或<b>播报</b>（🔊 声音）出现，两种各占约一半</li><li>不管哪种通道，只要<b>当前刺激</b>等于 <b>N 步前</b>的刺激就按「匹配」</li><li>听过的要记得住，看过的也要记得住 —— 双通道记忆 + 模态切换</li></ul>',
+    en: '<ul><li>Each stimulus randomly appears as <b>visual</b> (screen) or <b>spoken</b> (🔊 audio), ~50/50</li><li>Whatever the channel, press "Match" when it equals the one <b>N steps back</b></li><li>Remember what you hear AND what you see — dual-channel with modality switching</li></ul>',
+  },
+  span: {
+    zh: '<ul><li>刺激一个接一个出现，然后输入</li><li><b>顺序</b>模式：按原顺序输入；<b>倒序</b>模式：从最后一个往前输入（更难）</li><li>答对长度 +1，答错消耗一次机会，错 3 次结束</li></ul>',
+    en: '<ul><li>Stimuli appear one by one, then you type them</li><li><b>Forward</b>: type in order; <b>Backward</b>: type reversed (harder)</li><li>Correct → length +1. Wrong → lose a life. 3 misses ends the game</li></ul>',
+  },
 };
 const INTRO_EXTRA = {
   nback: () => {
     const s = settings.nback;
+    const modeLbl = {zh:'手动', en:'Manual'}, adpLbl = {zh:'自适应', en:'Adaptive'};
     const nOpts = s.mode === 'adaptive'
-      ? '<label>当前档位<select id="nb-n" disabled><option>' + s.level + '（自适应）</option></select></label>'
-      : '<label>N 步数<select id="nb-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
+      ? '<label>' + _('当前档位','Current level') + '<select id="nb-n" disabled><option>' + s.level + '（' + adpLbl[LANG] + '）</option></select></label>'
+      : '<label>N <select id="nb-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
     return nOpts
-      + '<label>难度<select id="nb-mode">' + optSel(['manual','adaptive'], s.mode, v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
-      + '<label>刺激<select id="nb-stim">' + optSel(['num','letter','color','emoji'], s.stim, v => ({num:'数字',letter:'字母',color:'颜色',emoji:'表情'})[v]) + '</select></label>'
-      + '<label>节奏<select id="nb-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label>'
-      + '<label>轮数<select id="nb-count">' + optSel([20,30,40], s.count) + '</select></label>';
+      + '<label>' + _('难度','Mode') + '<select id="nb-mode">' + optSel(['manual','adaptive'], s.mode, v => ({manual:modeLbl[LANG],adaptive:adpLbl[LANG]})[v]) + '</select></label>'
+      + '<label>' + _('刺激','Stimulus') + '<select id="nb-stim">' + optSel(['num','letter','color','emoji'], s.stim, v => ({num:_('数字','Numbers'),letter:_('字母','Letters'),color:_('颜色','Colors'),emoji:_('表情','Emoji')})[v]) + '</select></label>'
+      + '<label>' + _('节奏','Pace') + '<select id="nb-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:_('慢 · 1.5s','Slow · 1.5s'),normal:_('标准 · 1s','Normal · 1s'),fast:_('快 · 0.7s','Fast · 0.7s')})[v]) + '</select></label>'
+      + '<label>' + _('轮数','Trials') + '<select id="nb-count">' + optSel([20,30,40], s.count) + '</select></label>';
   },
   dual: () => {
     const s = settings.dual;
+    const modeLbl = {zh:'手动', en:'Manual'}, adpLbl = {zh:'自适应', en:'Adaptive'};
     const nOpts = s.mode === 'adaptive'
-      ? '<label>当前档位<select id="db-n" disabled><option>' + s.level + '（自适应）</option></select></label>'
-      : '<label>N 步数<select id="db-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
+      ? '<label>' + _('当前档位','Current level') + '<select id="db-n" disabled><option>' + s.level + '（' + adpLbl[LANG] + '）</option></select></label>'
+      : '<label>N <select id="db-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
     return nOpts
-      + '<label>难度<select id="db-mode">' + optSel(['manual','adaptive'], s.mode, v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
-      + '<label>听觉刺激<select id="db-stim">' + optSel(['num','letter'], s.stim, v => ({num:'数字',letter:'字母'})[v]) + '</select></label>'
-      + '<label>轮数<select id="db-count">' + optSel([20,30], s.count) + '</select></label>';
+      + '<label>' + _('难度','Mode') + '<select id="db-mode">' + optSel(['manual','adaptive'], s.mode, v => ({manual:modeLbl[LANG],adaptive:adpLbl[LANG]})[v]) + '</select></label>'
+      + '<label>' + _('听觉刺激','Audio') + '<select id="db-stim">' + optSel(['num','letter'], s.stim, v => ({num:_('数字','Numbers'),letter:_('字母','Letters')})[v]) + '</select></label>'
+      + '<label>' + _('轮数','Trials') + '<select id="db-count">' + optSel([20,30], s.count) + '</select></label>';
   },
   mix: () => {
     const s = settings.mix;
+    const modeLbl = {zh:'手动', en:'Manual'}, adpLbl = {zh:'自适应', en:'Adaptive'};
     const nOpts = s.mode === 'adaptive'
-      ? '<label>当前档位<select id="mx-n" disabled><option>' + s.level + '（自适应）</option></select></label>'
-      : '<label>N 步数<select id="mx-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
+      ? '<label>' + _('当前档位','Current level') + '<select id="mx-n" disabled><option>' + s.level + '（' + adpLbl[LANG] + '）</option></select></label>'
+      : '<label>N <select id="mx-n">' + optSel([1,2,3,4,5], s.n) + '</select></label>';
     return nOpts
-      + '<label>难度<select id="mx-mode">' + optSel(['manual','adaptive'], s.mode, v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
-      + '<label>刺激<select id="mx-stim">' + optSel(['num','letter','color','emoji'], s.stim, v => ({num:'数字',letter:'字母',color:'颜色',emoji:'表情'})[v]) + '</select></label>'
-      + '<label>节奏<select id="mx-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:'慢 · 1.5s',normal:'标准 · 1s',fast:'快 · 0.7s'})[v]) + '</select></label>'
-      + '<label>轮数<select id="mx-count">' + optSel([20,30,40], s.count) + '</select></label>';
+      + '<label>' + _('难度','Mode') + '<select id="mx-mode">' + optSel(['manual','adaptive'], s.mode, v => ({manual:modeLbl[LANG],adaptive:adpLbl[LANG]})[v]) + '</select></label>'
+      + '<label>' + _('刺激','Stimulus') + '<select id="mx-stim">' + optSel(['num','letter','color','emoji'], s.stim, v => ({num:_('数字','Numbers'),letter:_('字母','Letters'),color:_('颜色','Colors'),emoji:_('表情','Emoji')})[v]) + '</select></label>'
+      + '<label>' + _('节奏','Pace') + '<select id="mx-speed">' + optSel(['slow','normal','fast'], s.speed, v => ({slow:_('慢 · 1.5s','Slow · 1.5s'),normal:_('标准 · 1s','Normal · 1s'),fast:_('快 · 0.7s','Fast · 0.7s')})[v]) + '</select></label>'
+      + '<label>' + _('轮数','Trials') + '<select id="mx-count">' + optSel([20,30,40], s.count) + '</select></label>';
   },
   span: () => {
     const s = settings.span;
+    const modeLbl = {zh:'手动', en:'Manual'}, adpLbl = {zh:'自适应', en:'Adaptive'};
     const startOpts = s.adapt
-      ? '<label>当前起始<select id="ds-start" disabled><option>' + s.level + ' 位（自适应）</option></select></label>'
-      : '<label>起始长度<select id="ds-start">' + optSel([3,4,5], s.start) + '</select></label>';
+      ? '<label>' + _('当前起始','Current start') + '<select id="ds-start" disabled><option>' + s.level + ' ' + _('位（自适应）','(Adaptive)') + '</option></select></label>'
+      : '<label>' + _('起始长度','Start length') + '<select id="ds-start">' + optSel([3,4,5], s.start) + '</select></label>';
     return startOpts
-      + '<label>难度<select id="ds-adapt">' + optSel(['manual','adaptive'], s.adapt ? 'adaptive' : 'manual', v => v === 'manual' ? '手动' : '自适应') + '</select></label>'
-      + '<label>刺激<select id="ds-stim">' + optSel(['num','letter'], s.stim, v => ({num:'数字',letter:'字母'})[v]) + '</select></label>'
-      + '<label>模式<select id="ds-mode">' + optSel(['fwd','back'], s.mode, v => v === 'fwd' ? '顺序' : '倒序（更难）') + '</select></label>';
+      + '<label>' + _('难度','Mode') + '<select id="ds-adapt">' + optSel(['manual','adaptive'], s.adapt ? 'adaptive' : 'manual', v => ({manual:modeLbl[LANG],adaptive:adpLbl[LANG]})[v]) + '</select></label>'
+      + '<label>' + _('刺激','Stimulus') + '<select id="ds-stim">' + optSel(['num','letter'], s.stim, v => ({num:_('数字','Numbers'),letter:_('字母','Letters')})[v]) + '</select></label>'
+      + '<label>' + _('模式','Mode') + '<select id="ds-mode">' + optSel(['fwd','back'], s.mode, v => v === 'fwd' ? _('顺序','Forward') : _('倒序（更难）','Backward (harder)')) + '</select></label>';
   },
 };
 
 /* ============ 首页 ============ */
 function renderChips(){
-  $('#streak-chip').textContent = '🔥 连续 ' + S.streak + ' 天';
+  $('#streak-chip').textContent = '🔥 ' + _('连续 ','Streak: ') + S.streak + _(' 天','d');
 }
 function renderHome(){
   const todayCount = (S.lastDate === todayStr()) ? S.dailyCount : 0;
   const recent = S.history.slice(-8).reverse();
   $('#home').innerHTML = `
     <div class="hero card">
-      <h1>🧠 工作记忆训练营</h1>
-      <p class="sub">只练一件事：工作记忆 —— 每天 10–15 分钟，难度由你掌控</p>
+      <h1>🧠 ${LANG === 'zh' ? '工作记忆训练营' : 'Working Memory Gym'}</h1>
+      <p class="sub">${_('只练一件事：工作记忆 —— 每天 10–15 分钟，难度由你掌控','Train one thing: working memory — 10–15 min/day, difficulty in your hands')}</p>
       <div class="hero-chips">
-        <span class="chip">🔥 连续 ${S.streak} 天</span>
-        <span class="chip">📅 今日训练 ${todayCount} 次</span>
-        <span class="chip">🏋️ 累计 ${S.totalSessions} 次</span>
+        <span class="chip">🔥 ${_('连续 ','Streak: ')}${S.streak}${_(' 天','d')}</span>
+        <span class="chip">📅 ${_('今日训练 ','Today: ')}${todayCount}${_(' 次','')}</span>
+        <span class="chip">🏋️ ${_('累计 ','Total: ')}${S.totalSessions}${_(' 次','')}</span>
       </div>
     </div>
     <div class="card science">
-      <h3>🧬 为什么只练工作记忆？</h3>
-      <p>健忘、走神、说忘就忘 —— 这些大多指向同一个核心能力：<b>工作记忆</b>（大脑的「便签纸」，同时记住并处理几件事的能力）。它由前额叶皮层支撑，且像肌肉一样可训练。</p>
-      <p>四个游戏全部瞄准它：<b>N-Back</b>（数字流）、<b>双 N-Back</b>（视觉+听觉双通道，公认最强的训练范式）、<b>模态切换 N-Back</b>（视听随机切换）、<b>数字广度</b>（经典跨度测验）。N-Back 系列难度由你定（N 整局固定），数字广度逐级加压 —— 挑战区自己选。</p>
-      <p class="sub">有效训练的感觉是：<b>有点吃力，但不至于崩溃</b>。如果觉得轻松，说明难度该升了。</p>
+      <h3>🧬 ${_('为什么只练工作记忆？','Why working memory?')}</h3>
+      <p>${_('健忘、走神、说忘就忘 —— 这些大多指向同一个核心能力：','Forgetting, zoning out, losing your train of thought — most of it traces to one core ability:')} <b>${_('工作记忆','working memory')}</b>${_('（大脑的「便签纸」，同时记住并处理几件事的能力）。它由前额叶皮层支撑，且像肌肉一样可训练。',' (the brain\'s "sticky note" for holding & manipulating info). It lives in the prefrontal cortex and trains like a muscle.')}</p>
+      <p>${_('四个游戏全部瞄准它：','All four games target it:')} <b>N-Back</b>${_('（数字流）','')}、<b>${_('双 N-Back','Dual N-Back')}</b>${_('（视觉+听觉双通道，公认最强的训练范式）',' (dual-channel, the gold standard)')}、<b>${_('模态切换 N-Back','Modal N-Back')}</b>${_('（视听随机切换）',' (vis/audio switching)')}、<b>${_('数字广度','Digit Span')}</b>${_('（经典跨度测验）',' (classic span test)')}。${_('N-Back 系列难度由你定（N 整局固定），数字广度逐级加压。','')}</p>
+      <p class="sub">${_('有效训练的感觉是：有点吃力，但不至于崩溃。如果觉得轻松，说明难度该升了。','The sweet spot: challenging but not overwhelming. If it feels easy, level up.')}</p>
     </div>
-    <h2 class="sec-title">选择训练</h2>
+    <h2 class="sec-title">${_('选择训练','Choose a training')}</h2>
     <div class="game-grid">
       ${Object.keys(GAME_META).map(g => {
         const m = GAME_META[g], b = bestFor(g), h = historyFor(g);
-        const last = h ? `<div class="gc-best" style="color:var(--sub)">最近 ${h.score} 分 · ${h.date.slice(5)}</div>` : '';
+        const last = h ? `<div class="gc-best" style="color:var(--sub)">${_('最近 ','Last: ')}${h.score}${_(' 分',' pts')} · ${h.date.slice(5)}</div>` : '';
         return `<div class="game-card" style="--accent:${m.color}" onclick="goToIntro('${g}')">
           <div class="gc-icon">${m.icon}</div>
-          <div class="gc-body"><h3>${m.name}</h3><p>${m.desc}</p>
-          <div class="gc-best">${b ? '🏆 最佳 ' + b.score + ' 分' : '尚未练习'}</div>
+          <div class="gc-body"><h3>${m.name}</h3><p>${m.desc[LANG]}</p>
+          <div class="gc-best">${b ? '🏆 ' + _('最佳 ','Best: ') + b.score + _(' 分',' pts') : _('尚未练习','Not played yet')}</div>
           ${last}</div>
-          <div class="gc-go">开始 ›</div>
+          <div class="gc-go">${_('开始','Start')} ›</div>
         </div>`;
       }).join('')}
     </div>
     ${recent.length ? `
-    <h2 class="sec-title">📊 最近训练</h2>
+    <h2 class="sec-title">📊 ${_('最近训练','Recent sessions')}</h2>
     <div class="card" style="padding:14px 18px">
       ${recent.map(h => {
         const m = GAME_META[h.g];
-        const det = h.n != null ? 'N=' + h.n : (h.maxLen != null ? h.maxLen + ' 位' : '');
+        const det = h.n != null ? 'N=' + h.n : (h.maxLen != null ? h.maxLen + _(' 位','') : '');
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
           <span>${m ? m.icon + ' ' + m.name : h.g} <span class="sub">${det ? '· ' + det : ''}</span></span>
           <span><b style="color:var(--acc)">${h.score}</b> <span class="sub">${h.date.slice(5)}</span></span>
         </div>`;
       }).join('')}
     </div>` : ''}
-    <div class="card tip-card">💡 <b>训练建议：</b>双 N-Back 最累、收益也最大。每天至少一轮双 N-Back + 一轮 N-Back 或数字广度；感觉疲惫就停 —— 工作记忆训练吃的是「刚刚好」，不是「拼老命」。</div>
+    <div class="card tip-card">💡 <b>${_('训练建议：','Tip: ')}</b>${_('双 N-Back 最累、收益也最大。每天至少一轮双 N-Back + 一轮 N-Back 或数字广度；感觉疲惫就停。','Dual N-Back is the hardest and most rewarding. Aim for ≥1 dual N-Back + 1 N-Back or span daily; stop when tired.')}</div>
   `;
   show('home');
   renderChips();
@@ -416,11 +459,11 @@ function goToIntro(g){
     <div class="card intro-card" style="--accent:${meta.color}">
       <div class="result-icon">${meta.icon}</div>
       <h2>${meta.name}</h2>
-      <p class="sub">${meta.desc}</p>
-      <div class="howto"><h3>怎么玩</h3>${HOWTO[g]}</div>
+      <p class="sub">${meta.desc[LANG]}</p>
+      <div class="howto"><h3>${_('怎么玩','How to play')}</h3>${HOWTO[g][LANG]}</div>
       ${settings}
-      <button class="btn big" onclick="startGame('${g}')">开始训练</button>
-      <div class="row"><button class="btn ghost" onclick="renderHome()">返回</button></div>
+      <button class="btn big" onclick="startGame('${g}')">${_('开始训练','Start training')}</button>
+      <div class="row"><button class="btn ghost" onclick="renderHome()">${_('返回','Back')}</button></div>
     </div>`;
   show('intro');
 }
@@ -428,7 +471,7 @@ function startGame(g){
   ensureAudio();
   clearTimers();
   CUR_GAME = g;
-  $('#play').innerHTML = '<div class="loading">准备中…</div>';
+  $('#play').innerHTML = '<div class="loading">' + _('准备中…','Loading…') + '</div>';
   show('play');
   if (g === 'nback') NB.start();
   else if (g === 'dual') DB.start();
@@ -458,13 +501,13 @@ function finishGame(g, data){
     <div class="card result-card" style="--accent:${GAME_META[g].color}">
       <div class="result-icon">${GAME_META[g].icon}</div>
       <h2>${data.title}</h2>
-      <div class="score-big">${data.score}<span> 分</span></div>
-      ${isBest ? '<div class="best-tag">🏆 新纪录！</div>' : (prev ? '<div class="sub">历史最佳 ' + prev.score + ' 分</div>' : '')}
+      <div class="score-big">${data.score}<span> ${_('分','pts')}</span></div>
+      ${isBest ? '<div class="best-tag">🏆 ' + _('新纪录！','New record!') + '</div>' : (prev ? '<div class="sub">' + _('历史最佳 ','Best: ') + prev.score + _(' 分',' pts') + '</div>' : '')}
       <div class="stat-grid">${data.rows.map(r => '<div class="stat"><div class="stat-v">' + r[1] + '</div><div class="stat-k">' + r[0] + '</div></div>').join('')}</div>
       <div class="tip">💡 ${data.tip}</div>
       <div class="row">
-        <button class="btn ghost" onclick="startGame('${g}')">↻ 再来一次</button>
-        <button class="btn" onclick="renderHome()">返回首页</button>
+        <button class="btn ghost" onclick="startGame('${g}')">↻ ${_('再来一次','Play again')}</button>
+        <button class="btn" onclick="renderHome()">${_('返回首页','Home')}</button>
       </div>
     </div>`;
   show('result');
@@ -502,13 +545,13 @@ const NB = {
     $('#play').innerHTML = playHTML(`
       <div class="nb-wrap">
         <div class="nb-top">
-          <span class="nb-badge" id="nb-badge">N = ${NB.n}${settings.nback.mode === 'adaptive' ? ' · 自适应' : ''}</span>
+          <span class="nb-badge" id="nb-badge">N = ${NB.n}${settings.nback.mode === 'adaptive' ? ' · ' + _('自适应','Adaptive') : ''}</span>
           <span class="nb-progress" id="nb-prog">0 / ${NB.trials}</span>
         </div>
         <div id="nb-display" class="nb-display">·</div>
-        <div class="nb-hint">当前刺激等于 N 步前的刺激时，点「匹配」或按 <kbd>空格</kbd></div>
-        <button class="btn big" id="nb-btn">匹配</button>
-        <div class="nb-stats"><span id="nb-st-hits">命中 0</span><span id="nb-st-fa">误报 0</span><span id="nb-st-miss">漏报 0</span></div>
+        <div class="nb-hint">${_('当前刺激等于 N 步前的刺激时，点「匹配」或按 ','Press Match or ')}<kbd>${_('空格','Space')}</kbd></div>
+        <button class="btn big" id="nb-btn">${_('匹配','Match')}</button>
+        <div class="nb-stats"><span id="nb-st-hits">${_('命中 ','Hits: ')}0</span><span id="nb-st-fa">${_('误报 ','FA: ')}0</span><span id="nb-st-miss">${_('漏报 ','Miss: ')}0</span></div>
       </div>`);
     $('#nb-btn').addEventListener('click', nbPress);
     nbNext();
@@ -550,9 +593,9 @@ function nbPress(){
   nbStats();
 }
 function nbStats(){
-  $('#nb-st-hits').textContent = '命中 ' + NB.stats.hits;
-  $('#nb-st-fa').textContent = '误报 ' + NB.stats.fa;
-  $('#nb-st-miss').textContent = '漏报 ' + Math.max(0, NB.stats.matches - NB.stats.hits);
+  $('#nb-st-hits').textContent = _('命中 ','Hits: ') + NB.stats.hits;
+  $('#nb-st-fa').textContent = _('误报 ','FA: ') + NB.stats.fa;
+  $('#nb-st-miss').textContent = _('漏报 ','Miss: ') + Math.max(0, NB.stats.matches - NB.stats.hits);
 }
 function nbFinish(){
   const st = NB.stats;
@@ -565,23 +608,23 @@ function nbFinish(){
     const oldLevel = settings.nback.level;
     if (acc >= 0.8) settings.nback.level = Math.min(5, oldLevel + 1);
     else if (acc <= 0.5) settings.nback.level = Math.max(1, oldLevel - 1);
-    if (settings.nback.level !== oldLevel) levelNote = `命中率 ${Math.round(acc * 100)}% → 下一局 N=${settings.nback.level}`;
+    if (settings.nback.level !== oldLevel) levelNote = _('命中率 ','Accuracy ') + Math.round(acc * 100) + '% → ' + _('下一局 N=','next round N=') + settings.nback.level;
     saveSettings();
   }
   finishGame('nback', {
     score: score,
-    title: 'N-Back 完成！',
+    title: _('N-Back 完成！','N-Back Complete!'),
     rows: [
-      ['命中', st.hits + ' / ' + st.matches],
-      ['漏报', st.misses],
-      ['误报', st.fa],
-      ['命中率', st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
-      ['N 步数', NB.n],
-      ['得分', score]
+      [_('命中','Hits'), st.hits + ' / ' + st.matches],
+      [_('漏报','Misses'), st.misses],
+      [_('误报','False alarms'), st.fa],
+      [_('命中率','Accuracy'), st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
+      ['N', NB.n],
+      [_('得分','Score'), score]
     ],
     tip: levelNote || (settings.nback.mode === 'adaptive'
-      ? '自适应模式：命中率 80% 以上下一局自动升档，50% 以下降档。'
-      : '整局固定 ' + NB.n + '-back 稳定发挥就是进步。想加码？下次开赛把 N 调高一档。')
+      ? _('自适应模式：命中率 80% 以上下一局自动升档，50% 以下降档。','Adaptive: ≥80% accuracy moves you up next round, ≤50% moves you down.')
+      : _('整局固定 ','Fixed N=') + NB.n + _('-back 稳定发挥就是进步。想加码？下次开赛把 N 调高一档。',' all round. To push further, raise N next time.'))
   });
 }
 
@@ -617,13 +660,13 @@ const MX = {
     $('#play').innerHTML = playHTML(`
       <div class="nb-wrap">
         <div class="nb-top">
-          <span class="nb-badge" id="mx-badge">N = ${MX.n}${settings.mix.mode === 'adaptive' ? ' · 自适应' : ''}</span>
+          <span class="nb-badge" id="mx-badge">N = ${MX.n}${settings.mix.mode === 'adaptive' ? ' · ' + _('自适应','Adaptive') : ''}</span>
           <span class="nb-progress" id="mx-prog">0 / ${MX.trials}</span>
         </div>
         <div id="mx-display" class="nb-display mx-display">·</div>
-        <div class="nb-hint">刺激可能<b>显示</b>也可能<b>播报</b>（🔊）—— 不管哪种，与 N 步前相同就按 <kbd>空格</kbd></div>
-        <button class="btn big" id="mx-btn">匹配</button>
-        <div class="nb-stats"><span id="mx-st-hits">命中 0</span><span id="mx-st-fa">误报 0</span><span id="mx-st-miss">漏报 0</span></div>
+        <div class="nb-hint">${_('刺激可能','A stimulus may ')}<b>${_('显示','show')}</b>${_('也可能',' or ')}<b>${_('播报','speak')}</b>（🔊）— ${_('不管哪种，与 N 步前相同就按 ','either way, press if it matches N back: ')}<kbd>${_('空格','Space')}</kbd></div>
+        <button class="btn big" id="mx-btn">${_('匹配','Match')}</button>
+        <div class="nb-stats"><span id="mx-st-hits">${_('命中 ','Hits: ')}0</span><span id="mx-st-fa">${_('误报 ','FA: ')}0</span><span id="mx-st-miss">${_('漏报 ','Miss: ')}0</span></div>
       </div>`);
     $('#mx-btn').addEventListener('click', mxPress);
     mxNext();
@@ -673,9 +716,9 @@ function mxPress(){
   mxStats();
 }
 function mxStats(){
-  $('#mx-st-hits').textContent = '命中 ' + MX.stats.hits;
-  $('#mx-st-fa').textContent = '误报 ' + MX.stats.fa;
-  $('#mx-st-miss').textContent = '漏报 ' + Math.max(0, MX.stats.matches - MX.stats.hits);
+  $('#mx-st-hits').textContent = _('命中 ','Hits: ') + MX.stats.hits;
+  $('#mx-st-fa').textContent = _('误报 ','FA: ') + MX.stats.fa;
+  $('#mx-st-miss').textContent = _('漏报 ','Miss: ') + Math.max(0, MX.stats.matches - MX.stats.hits);
 }
 function mxFinish(){
   const st = MX.stats;
@@ -687,23 +730,23 @@ function mxFinish(){
     const oldLevel = settings.mix.level;
     if (acc >= 0.8) settings.mix.level = Math.min(5, oldLevel + 1);
     else if (acc <= 0.5) settings.mix.level = Math.max(1, oldLevel - 1);
-    if (settings.mix.level !== oldLevel) levelNote = `命中率 ${Math.round(acc * 100)}% → 下一局 N=${settings.mix.level}`;
+    if (settings.mix.level !== oldLevel) levelNote = _('命中率 ','Accuracy ') + Math.round(acc * 100) + '% → ' + _('下一局 N=','next round N=') + settings.mix.level;
     saveSettings();
   }
   finishGame('mix', {
     score: score,
-    title: '模态切换 N-Back 完成！',
+    title: _('模态切换 N-Back 完成！','Modal N-Back Complete!'),
     rows: [
-      ['命中', st.hits + ' / ' + st.matches],
-      ['漏报', st.misses],
-      ['误报', st.fa],
-      ['命中率', st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
-      ['N 步数', MX.n],
-      ['得分', score]
+      [_('命中','Hits'), st.hits + ' / ' + st.matches],
+      [_('漏报','Misses'), st.misses],
+      [_('误报','False alarms'), st.fa],
+      [_('命中率','Accuracy'), st.matches ? Math.round(st.hits / st.matches * 100) + '%' : '—'],
+      ['N', MX.n],
+      [_('得分','Score'), score]
     ],
     tip: levelNote || (settings.mix.mode === 'adaptive'
-      ? '自适应模式：命中率 80% 以上下一局自动升档，50% 以下降档。'
-      : '视觉和听觉来回切换，逼大脑把两种通道的刺激存进同一条记忆线。这是 N-Back 家族里最需要「分心也能记住」的版本。')
+      ? _('自适应模式：命中率 80% 以上下一局自动升档，50% 以下降档。','Adaptive: ≥80% accuracy moves you up next round, ≤50% moves you down.')
+      : _('视觉和听觉来回切换，逼大脑把两种通道的刺激存进同一条记忆线。这是最需要「分心也能记住」的版本。','Switching between visual & audio forces the brain to store both channels on one timeline. The ultimate "remember while distracted" test.'))
   });
 }
 /* ============ 游戏 2：双 N-Back ============ */
@@ -734,22 +777,22 @@ const DB = {
     $('#play').innerHTML = playHTML(`
       <div class="dual-wrap">
         <div class="nb-top">
-          <span class="nb-badge" id="db-badge">N = ${DB.n}${settings.dual.mode === 'adaptive' ? ' · 自适应' : ''}</span>
+          <span class="nb-badge" id="db-badge">N = ${DB.n}${settings.dual.mode === 'adaptive' ? ' · ' + _('自适应','Adaptive') : ''}</span>
           <span class="nb-progress" id="db-prog">0 / ${DB.trials}</span>
         </div>
         <div class="dual-grid" id="db-grid">
           ${Array.from({ length: 9 }, (_, i) => '<div class="dual-cell" data-i="' + i + '"></div>').join('')}
         </div>
         <div class="dual-btns">
-          <button class="dual-btn pos" id="db-pos">位置 <kbd>空格</kbd></button>
-          <button class="dual-btn both" id="db-both">同时匹配 <kbd>B</kbd></button>
-          <button class="dual-btn num" id="db-num">${settings.dual.stim === 'letter' ? '字母' : '数字'} <kbd>Enter</kbd></button>
+          <button class="dual-btn pos" id="db-pos">${_('位置','Position')} <kbd>${_('空格','Space')}</kbd></button>
+          <button class="dual-btn both" id="db-both">${_('同时匹配','Both')} <kbd>B</kbd></button>
+          <button class="dual-btn num" id="db-num">${settings.dual.stim === 'letter' ? _('字母','Letter') : _('数字','Audio')} <kbd>Enter</kbd></button>
         </div>
-        <div class="dual-hint">位置与 N 步前相同 → 位置；刺激相同 → ${settings.dual.stim === 'letter' ? '字母' : '数字'}；<b>两个都相同 → 同时匹配</b>（一次得双通道分）</div>
+        <div class="dual-hint">${_('位置与 N 步前相同 → 位置；刺激相同 → ','Position matches N back? Press Position. Stimulus matches? Press ')}${settings.dual.stim === 'letter' ? _('字母','Letter') : _('数字','Audio')}；<b>${_('两个都相同 → 同时匹配','both match? Press BOTH')}</b>（${_('一次得双通道分','double credit')}）</div>
         <div class="dual-stats">
-          <span id="db-st-pos">位置 0/0</span><span id="db-st-dig">${settings.dual.stim === 'letter' ? '字母' : '数字'} 0/0</span><span id="db-st-both">同时 0/0</span><span id="db-st-fa">误报 0</span>
+          <span id="db-st-pos">${_('位置 ','Pos: ')}0/0</span><span id="db-st-dig">${settings.dual.stim === 'letter' ? _('字母 ','Let: ') : _('音频 ','Aud: ')}0/0</span><span id="db-st-both">${_('同时 ','Both: ')}0/0</span><span id="db-st-fa">${_('误报 ','FA: ')}0</span>
         </div>
-        <div class="dual-audio-note">🔊 刺激通过语音播报（无声卡时用音高表示）</div>
+        <div class="dual-audio-note">🔊 ${_('刺激通过语音播报（无声卡时用音高表示）','Stimuli are spoken; pitch is used when no TTS')}</div>
       </div>`);
     $('#db-pos').addEventListener('click', () => dbPress('pos'));
     $('#db-both').addEventListener('click', () => dbPress('both'));
@@ -823,10 +866,10 @@ function dbPress(kind){
   dbStats();
 }
 function dbStats(){
-  $('#db-st-pos').textContent = '位置 ' + DB.stats.posHits + '/' + DB.stats.posMiss;
-  $('#db-st-dig').textContent = (settings.dual.stim === 'letter' ? '字母 ' : '数字 ') + DB.stats.digHits + '/' + DB.stats.digMiss;
-  $('#db-st-both').textContent = '同时 ' + DB.stats.bothHits + '/' + (DB.log.filter(l => l.bm).length);
-  $('#db-st-fa').textContent = '误报 ' + (DB.stats.posFA + DB.stats.digFA + DB.stats.bothFA);
+  $('#db-st-pos').textContent = _('位置 ','Pos: ') + DB.stats.posHits + '/' + DB.stats.posMiss;
+  $('#db-st-dig').textContent = (settings.dual.stim === 'letter' ? _('字母 ','Let: ') : _('音频 ','Aud: ')) + DB.stats.digHits + '/' + DB.stats.digMiss;
+  $('#db-st-both').textContent = _('同时 ','Both: ') + DB.stats.bothHits + '/' + (DB.log.filter(l => l.bm).length);
+  $('#db-st-fa').textContent = _('误报 ','FA: ') + (DB.stats.posFA + DB.stats.digFA + DB.stats.bothFA);
 }
 function dbFinish(){
   const st = DB.stats;
@@ -840,23 +883,23 @@ function dbFinish(){
     const oldLevel = settings.dual.level;
     if (acc >= 0.8) settings.dual.level = Math.min(5, oldLevel + 1);
     else if (acc <= 0.5) settings.dual.level = Math.max(1, oldLevel - 1);
-    if (settings.dual.level !== oldLevel) levelNote = `综合命中率 ${Math.round(acc * 100)}% → 下一局 N=${settings.dual.level}`;
+    if (settings.dual.level !== oldLevel) levelNote = _('综合命中率 ','Combined accuracy ') + Math.round(acc * 100) + '% → ' + _('下一局 N=','next round N=') + settings.dual.level;
     saveSettings();
   }
   finishGame('dual', {
     score: score,
-    title: '双 N-Back 完成！',
+    title: _('双 N-Back 完成！','Dual N-Back Complete!'),
     rows: [
-      ['位置命中', st.posHits + ' / ' + st.posMiss],
-      [settings.dual.stim === 'letter' ? '字母命中' : '数字命中', st.digHits + ' / ' + st.digMiss],
-      ['同时命中', st.bothHits + ' / ' + DB.log.filter(l => l.bm).length],
-      ['误报', fa],
-      ['N 步数', DB.n],
-      ['得分', score]
+      [_('位置命中','Position hits'), st.posHits + ' / ' + st.posMiss],
+      [(settings.dual.stim === 'letter' ? _('字母命中','Letter hits') : _('数字命中','Audio hits')), st.digHits + ' / ' + st.digMiss],
+      [_('同时命中','Both hits'), st.bothHits + ' / ' + DB.log.filter(l => l.bm).length],
+      [_('误报','False alarms'), fa],
+      ['N', DB.n],
+      [_('得分','Score'), score]
     ],
     tip: levelNote || (settings.dual.mode === 'adaptive'
-      ? '自适应模式：综合命中率 80% 以上下一局自动升档，50% 以下降档。'
-      : '双通道同时命中是最高阶反应 —— 「同时匹配」一次拿下双通道分。每天一轮，坚持两周再看变化。')
+      ? _('自适应模式：综合命中率 80% 以上下一局自动升档，50% 以下降档。','Adaptive: ≥80% combined accuracy moves you up next round, ≤50% moves you down.')
+      : _('双通道同时命中是最高阶反应 —— 「同时匹配」一次拿下双通道分。每天一轮，坚持两周再看变化。','Simultaneous double-hit is the top skill — press BOTH for double credit. One round a day; check your curve in two weeks.'))
   });
 }
 
@@ -877,16 +920,16 @@ const DS = {
     $('#play').innerHTML = playHTML(`
       <div class="span-wrap">
         <div class="span-info">
-          <span>当前长度 <b id="ds-len">${DS.len}</b></span>
-          <span>机会 <b id="ds-strikes"></b></span>
-          <span>得分 <b id="ds-score">0</b></span>
+          <span>${_('当前长度','Length')} <b id="ds-len">${DS.len}</b></span>
+          <span>${_('机会','Lives')} <b id="ds-strikes"></b></span>
+          <span>${_('得分','Score')} <b id="ds-score">0</b></span>
         </div>
         <div class="span-display" id="ds-display">·</div>
         <div class="span-input-row">
-          <input id="ds-input" autocomplete="off" placeholder="${settings.span.stim === 'letter' ? '输入字母…' : '输入数字…'}" disabled/>
-          <button class="btn" id="ds-submit" disabled>确定</button>
+          <input id="ds-input" autocomplete="off" placeholder="${settings.span.stim === 'letter' ? _('输入字母…','Type letters…') : _('输入数字…','Type digits…')}" disabled/>
+          <button class="btn" id="ds-submit" disabled>${_('确定','OK')}</button>
         </div>
-        <div class="span-hint" id="ds-hint">${DS.mode === 'fwd' ? '记住出现的' + (settings.span.stim === 'letter' ? '字母' : '数字') : '记住出现的' + (settings.span.stim === 'letter' ? '字母' : '数字') + '（倒序输入）'}</div>
+        <div class="span-hint" id="ds-hint">${DS.mode === 'fwd' ? _('记住出现的','Remember what appears') + (settings.span.stim === 'letter' ? _('字母',' letters') : _('数字',' digits')) : _('记住出现的','Remember what appears') + (settings.span.stim === 'letter' ? _('字母',' letters') : _('数字',' digits')) + _('（倒序输入）',' (type reversed)')}</div>
       </div>`);
     $('#ds-input').addEventListener('keydown', e => { if (e.key === 'Enter') dsSubmit(); });
     $('#ds-submit').addEventListener('click', dsSubmit);
@@ -932,7 +975,7 @@ function dsInputPhase(){
   inp.disabled = false;
   inp.focus();
   $('#ds-submit').disabled = false;
-  $('#ds-hint').textContent = DS.mode === 'fwd' ? '依次输入刚才的数字，回车提交' : '从最后一个数字往前倒序输入，回车提交';
+  $('#ds-hint').textContent = DS.mode === 'fwd' ? _('依次输入刚才的','Type what you saw in order, Enter to submit') + (settings.span.stim === 'letter' ? _('字母',' letters') : _('数字',' digits')) : _('从最后一个往前倒序输入，回车提交','Type them backwards from the last one, Enter to submit');
 }
 function dsSubmit(){
   if (DS.phase !== 'input') return;
@@ -946,7 +989,7 @@ function dsSubmit(){
     flash('#ds-display', 'correct');
     if (DS.len >= 12) return dsFinish();
     DS.len++;
-    $('#ds-hint').textContent = '✅ 正确！长度 +1 → ' + DS.len;
+    $('#ds-hint').textContent = '✅ ' + _('正确！长度 +1 → ','Correct! Length +1 → ') + DS.len;
     setT('ds-next', () => { DS.phase = 'idle'; dsNewRound(); }, 800);
   } else {
     DS.strikes++;
@@ -954,7 +997,7 @@ function dsSubmit(){
     beep(140, 0.25, 'sawtooth', 0.12);
     updateDsStrikes();
     if (DS.strikes >= 3) return dsFinish();
-    $('#ds-hint').textContent = '❌ 错了（还剩 ' + (3 - DS.strikes) + ' 次机会），再看一遍这个长度';
+    $('#ds-hint').textContent = '❌ ' + _('错了（还剩 ','Wrong (' ) + (3 - DS.strikes) + _(' 次机会），再看一遍这个长度',' lives left), watch again at same length');
     setT('ds-next', () => { DS.phase = 'idle'; dsNewRound(); }, 900);
   }
 }
@@ -967,21 +1010,21 @@ function dsFinish(){
     // 有剩余机会且到了最长 → 下一局 +1；否则保持（避免反复降）
     if (DS.strikes < 3) settings.span.level = Math.min(12, oldLevel + 1);
     else settings.span.level = Math.max(2, oldLevel - 1);
-    if (settings.span.level !== oldLevel) levelNote = `本局最长 ${DS.maxLen} 位 → 下一局从 ${settings.span.level} 位开始`;
+    if (settings.span.level !== oldLevel) levelNote = _('本局最长 ','Max length this round: ') + DS.maxLen + _(' 位 → 下一局从 ',' → next round starts at ') + settings.span.level + _(' 位','');
     saveSettings();
   }
   finishGame('span', {
     score: score,
-    title: '数字广度结束',
+    title: _('数字广度结束','Digit Span Complete'),
     rows: [
-      ['最长长度', DS.maxLen + ' 位'],
-      ['答对轮次', DS.rounds + ' / ' + totalRounds],
-      ['剩余机会', Math.max(0, 3 - DS.strikes)],
-      ['得分', score]
+      [_('最长长度','Max length'), DS.maxLen + _(' 位','')],
+      [_('答对轮次','Rounds passed'), DS.rounds + ' / ' + totalRounds],
+      [_('剩余机会','Lives left'), Math.max(0, 3 - DS.strikes)],
+      [_('得分','Score'), score]
     ],
     tip: levelNote || (settings.span.adapt
-      ? '自适应模式：答到最长且未用尽机会，下一局自动 +1 位。'
-      : '普通人顺序广度 7±2、倒序约 5-6。你能稳定倒序背到 ' + DS.maxLen + ' 位了吗？每周复测一次，看曲线往上走。')
+      ? _('自适应模式：答到最长且未用尽机会，下一局自动 +1 位。','Adaptive: clear your max with lives left? Next round starts one higher.')
+      : _('普通人顺序广度 7±2、倒序约 5-6。你能稳定倒序背到 ','Average forward span is 7±2, backward ~5-6. Can you hold ' + DS.maxLen + _(' 位了吗？每周复测一次，看曲线往上走。',' reliably? Retest weekly and watch the curve climb.')))
   });
 }
 
@@ -989,6 +1032,7 @@ function dsFinish(){
 document.addEventListener('DOMContentLoaded', () => {
   loadS();
   loadSettings();
+  loadLang();
   renderHome();
   // 预加载语音列表
   try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
@@ -997,6 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
     muted = !muted;
     $('#sound-btn').textContent = muted ? '🔇' : '🔊';
   });
+  $('#lang-btn').addEventListener('click', toggleLang);
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if ((CUR_GAME === 'nback' || CUR_GAME === 'mix') && (e.code === 'Space' || e.code === 'Enter')) {
