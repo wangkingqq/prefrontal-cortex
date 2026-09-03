@@ -911,6 +911,7 @@ const DS = {
     const aSel = $('#ds-adapt'); if (aSel) settings.span.adapt = aSel.value === 'adaptive';
     const stSel = $('#ds-stim'); if (stSel) settings.span.stim = stSel.value;
     const mSel = $('#ds-mode'); if (mSel) settings.span.mode = mSel.value;
+    DS.mode = settings.span.mode; // 同步到游戏对象(否则判定永远用默认 fwd)
     const sSel = $('#ds-start');
     if (sSel) DS.startLen = settings.span.adapt ? settings.span.level : +sSel.value;
     settings.span = Object.assign({}, settings.span, { start: DS.startLen });
