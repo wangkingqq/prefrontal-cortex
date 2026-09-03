@@ -565,7 +565,7 @@ function nbNext(){
   const dis = $('#nb-display');
   dis.textContent = NB.seq[i];
   dis.classList.add('on');
-  beep(NB.curMatch ? 880 : 440, 0.08, 'sine', 0.06);
+  beep(440, 0.08, 'sine', 0.05); // 统一节拍音, 与内容/匹配状态无关(防听音作弊)
   NB.phase = 'on';
   $('#nb-prog').textContent = (i + 1) + ' / ' + NB.trials;
   setT('nb', () => {
@@ -682,7 +682,7 @@ function mxNext(){
   if (MX.mods[i] === 'vis') {
     dis.textContent = MX.seq[i];
     dis.dataset.mode = 'vis';
-    beep(MX.curMatch ? 880 : 440, 0.08, 'sine', 0.06);
+    beep(440, 0.08, 'sine', 0.05); // 统一节拍音, 防听音作弊
   } else {
     dis.textContent = '🔊';
     dis.dataset.mode = 'aud';
@@ -958,8 +958,7 @@ function dsShowNext(){
   const item = DS.list[DS.idx];
   dis.textContent = item;
   dis.className = 'span-display on';
-  const tone = settings.span.stim === 'num' ? 500 + item * 90 : 600 + (String(item).charCodeAt(0) % 10) * 60;
-  beep(tone, 0.1, 'sine', 0.07);
+  beep(500, 0.08, 'sine', 0.05); // 统一节拍音, 音高与内容无关(防听音作弊)
   setT('ds-show', () => {
     dis.textContent = '';
     DS.idx++;
